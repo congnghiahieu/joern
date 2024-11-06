@@ -39,6 +39,7 @@ lazy val jssrc2cpg     = project.in(file("frontends/jssrc2cpg"))
 lazy val swiftsrc2cpg  = project.in(file("frontends/swiftsrc2cpg"))
 lazy val rubysrc2cpg   = project.in(file("frontends/rubysrc2cpg"))
 lazy val gosrc2cpg     = project.in(file("frontends/gosrc2cpg"))
+lazy val rustsrc2cpg   = project.in(file("frontends/rustsrc2cpg"))
 lazy val csharpsrc2cpg = project.in(file("frontends/csharpsrc2cpg"))
 
 Universal / mappings ++= frontendMappings("kotlin2cpg", (kotlin2cpg / stage).value)
@@ -52,6 +53,7 @@ Universal / mappings ++= frontendMappings("pysrc2cpg", (pysrc2cpg / stage).value
 Universal / mappings ++= frontendMappings("php2cpg", (php2cpg / stage).value)
 Universal / mappings ++= frontendMappings("rubysrc2cpg", (rubysrc2cpg / stage).value)
 Universal / mappings ++= frontendMappings("gosrc2cpg", (gosrc2cpg / stage).value)
+Universal / mappings ++= frontendMappings("rustsrc2cpg", (rustsrc2cpg / stage).value)
 Universal / mappings ++= frontendMappings("csharpsrc2cpg", (csharpsrc2cpg / stage).value)
 
 lazy val cpgVersionFile = taskKey[File]("persist cpg version in file (e.g. for schema-extender)")
@@ -131,14 +133,17 @@ generateScaladocs := {
 
 Universal / packageBin / mappings ++= sbt.Path.directory(new File("joern-cli/src/main/resources/scripts"))
 
-lazy val removeModuleInfoFromJars = taskKey[Unit]("remove module-info.class from dependency jars - a hacky workaround for a scala3 compiler bug https://github.com/scala/scala3/issues/20421")
+lazy val removeModuleInfoFromJars = taskKey[Unit](
+  "remove module-info.class from dependency jars - a hacky workaround for a scala3 compiler bug https://github.com/scala/scala3/issues/20421"
+)
 removeModuleInfoFromJars := {
   import java.nio.file.{Files, FileSystems}
   val logger = streams.value.log
-  val libDir = (Universal/stagingDirectory).value / "lib"
+  val libDir = (Universal / stagingDirectory).value / "lib"
 
   // remove all `/module-info.class` from all jars
-  Files.walk(libDir.toPath)
+  Files
+    .walk(libDir.toPath)
     .filter(_.toString.endsWith(".jar"))
     .forEach { jar =>
       val zipFs = FileSystems.newFileSystem(jar)
@@ -151,6 +156,6 @@ removeModuleInfoFromJars := {
       zipFs.close()
     }
 }
-removeModuleInfoFromJars := removeModuleInfoFromJars.triggeredBy(Universal/stage).value
+removeModuleInfoFromJars := removeModuleInfoFromJars.triggeredBy(Universal / stage).value
 
 maintainer := "fabs@shiftleft.io"

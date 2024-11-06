@@ -73,10 +73,10 @@ flake.lock
 # IDE/OS     #
 ##############
 
-.vscode
+# .vscode
 .idea/
 .bloop
 **/.DS_Store
 **/.bsp
 
-
+out*

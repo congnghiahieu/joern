@@ -1,0 +1,29 @@
+[package]
+name = "parser"
+version = "0.1.0"
+edition = "2021"
+description = "Rust Parser using syn, tree_sitter, cargo_toml, rust_analyzer, rust_code_analysis"
+
+[dependencies]
+clap = {version = "4.5.17", features = ["cargo", "derive"]}
+
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8.19"
+cargo_toml = "0.20.5"
+
+syn = { version = "2", features = ["full", "extra-traits"] }
+syn-serde = { version = "0.3.1", features = ["json"] }
+quote = "1.0.37"
+proc-macro2 = "1.0.86"
+tree-sitter = "0.20"
+tree-sitter-rust = "0.20"
+tree-sitter-traversal = "0.1.2"
+
+tokio = { version = "1.40.0", features = ["full"] }
+
+[build-dependencies]
+cc="*"
+
+[lib]
+proc-macro = true

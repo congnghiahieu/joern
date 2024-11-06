@@ -56,6 +56,8 @@ class ImportCode[T <: Project](console: io.joern.console.Console[T])(implicit
   def python: SourceBasedFrontend =
     new SourceBasedFrontend("python", Languages.PYTHONSRC, "Python Source Frontend", "py")
   def golang: SourceBasedFrontend = new SourceBasedFrontend("golang", Languages.GOLANG, "Golang Source Frontend", "go")
+  def rustlang: SourceBasedFrontend =
+    new SourceBasedFrontend("rustlang", ExtendLanguages.RUSTLANG, "Rustlang Source Frontend", "rs")
   def javascript: SourceBasedFrontend =
     new JsFrontend("javascript", Languages.JAVASCRIPT, "Javascript Source Frontend", "js")
   def jssrc: SourceBasedFrontend =
@@ -80,6 +82,7 @@ class ImportCode[T <: Project](console: io.joern.console.Console[T])(implicit
       jssrc,
       swiftsrc,
       golang,
+      rustlang,
       llvm,
       php,
       python,
