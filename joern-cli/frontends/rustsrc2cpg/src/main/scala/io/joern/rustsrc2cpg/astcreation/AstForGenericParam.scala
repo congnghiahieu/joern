@@ -35,7 +35,7 @@ trait AstForGenericParam(implicit schemaValidationMode: ValidationMode) { this: 
       case None        => List()
     }
     val lifetimePredicateAst = astForLifetimeAsParam(filename, parentFullname, lifetimeParamInstance.lifetime)
-    val boundsAst            = lifetimeParamInstance.bounds.map(astForLifetimeAsParam(filename, parentFullname, _))
+    val boundsAst            = lifetimeParamInstance.bounds.map(astForLifetime(filename, parentFullname, _))
 
     var code =
       s"${codeForLifetime(filename, parentFullname, lifetimeParamInstance.lifetime)}"

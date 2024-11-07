@@ -20,17 +20,26 @@ trait AstForTraitBoundModifier(implicit schemaValidationMode: ValidationMode) { 
       case Some(path) => typeFullnameForPath(filename, parentFullname, path)
       case None       => Defines.Unknown
     }
-    var code = traitBound.paren_token match {
-      case Some(true) => s"($typeFullname)"
-      case _          => typeFullname
-    }
-    code = traitBound.modifier match {
-      case Some(TraitBoundModifier.Maybe) => s"?$code"
-      case _                              => code
+    val code = codeForTraitBound(filename, parentFullname, traitBound)
+
+    val lifetimeBoundsAst = traitBound.lifetimes match {
+      case Some(lifetimes) => lifetimes.map(astForGenericParam(filename, parentFullname, _))
+      case None            => List()
     }
 
-    val node = NewTypeParameter().name(typeFullname).code(code)
-    Ast(node)
+    setCurrentPathCpgNodeType(PathCPGNodeType.TYPEREF_NODE)
+    val pathAst = traitBound.path match {
+      case Some(path) => astForPath(filename, parentFullname, path)
+      case None       => Ast()
+    }
+    val node = NewTypeParameter()
+      .name(typeFullname)
+      .code(code)
+
+    Ast(unknownNode(traitBound, code))
+      .withChild(Ast(node))
+      .withChild(pathAst)
+      .withChildren(lifetimeBoundsAst)
   }
 
   def codeForTraitBound(filename: String, parentFullname: String, traitBound: TraitBound): String = {
@@ -39,9 +48,14 @@ trait AstForTraitBoundModifier(implicit schemaValidationMode: ValidationMode) { 
       case None       => Defines.Unknown
     }
 
-    traitBound.modifier match {
-      case Some(TraitBoundModifier.Maybe) => s"?$typeFullname"
-      case _                              => s"$typeFullname"
+    var code = traitBound.paren_token match {
+      case Some(true) => s"($typeFullname)"
+      case _          => typeFullname
     }
+    code = traitBound.modifier match {
+      case Some(TraitBoundModifier.Maybe) => s"?$code"
+      case _                              => code
+    }
+    code
   }
 }

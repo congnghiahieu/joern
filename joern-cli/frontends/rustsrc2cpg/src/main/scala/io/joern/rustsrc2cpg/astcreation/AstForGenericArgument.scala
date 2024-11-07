@@ -11,9 +11,10 @@ import io.joern.x2cpg.utils.NodeBuilders
 import io.joern.x2cpg.utils.NodeBuilders.newModifierNode
 import io.shiftleft.codepropertygraph.generated.EvaluationStrategies
 import io.shiftleft.codepropertygraph.generated.ModifierTypes
-import io.shiftleft.codepropertygraph.generated.nodes.*
+import io.shiftleft.codepropertygraph.generated.nodes.{Lifetime as LifetimeCpg, NewTypeArgument}
 
 import scala.collection.mutable.ListBuffer
+import io.shiftleft.codepropertygraph.generated.nodes.NewLifetimeArgument
 
 trait AstForGenericArgument(implicit schemaValidationMode: ValidationMode) { this: AstCreator =>
   def astForGenericArgument(filename: String, parentFullname: String, genericArgumentInstance: GenericArgument): Ast = {
@@ -36,7 +37,10 @@ trait AstForGenericArgument(implicit schemaValidationMode: ValidationMode) { thi
 
   def astForLifetimeGenericArgument(filename: String, parentFullname: String, lifetimeInstance: Lifetime): Ast = {
     val code = codeForLifetime(filename, parentFullname, lifetimeInstance)
-    val node = NewTypeArgument().code(code)
+    val node = NewLifetimeArgument()
+      .name(code)
+      .code(code)
+
     Ast(node)
   }
 

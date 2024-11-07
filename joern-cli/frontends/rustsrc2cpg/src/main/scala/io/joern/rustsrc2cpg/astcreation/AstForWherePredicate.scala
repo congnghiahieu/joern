@@ -10,9 +10,16 @@ import io.joern.x2cpg.utils.NodeBuilders.newModifierNode
 import io.joern.x2cpg.utils.NodeBuilders.newThisParameterNode
 import io.shiftleft.codepropertygraph.generated.EvaluationStrategies
 import io.shiftleft.codepropertygraph.generated.ModifierTypes
-import io.shiftleft.codepropertygraph.generated.nodes.*
+import io.shiftleft.codepropertygraph.generated.nodes.{
+  Lifetime as LifetimeCpg,
+  NewTypeParameter,
+  LifetimeParameter,
+  NewLifetimeParameter
+}
 
 import scala.collection.mutable.ListBuffer
+import io.shiftleft.codepropertygraph.generated.nodes.NewLifetime
+import io.shiftleft.codepropertygraph.generated.nodes.NewLifetimeArgument
 
 trait AstForWherePredicate(implicit schemaValidationMode: ValidationMode) { this: AstCreator =>
   def astForWherePredicate(filename: String, parentFullname: String, wherePredicateInstance: WherePredicate): Ast = {
@@ -31,7 +38,7 @@ trait AstForWherePredicate(implicit schemaValidationMode: ValidationMode) { this
     lifetimeWherePredicateInstance: PredicateLifetime
   ): Ast = {
     val lifetimePredicateAst = astForLifetimeAsParam(filename, parentFullname, lifetimeWherePredicateInstance.lifetime)
-    val boundsAst = lifetimeWherePredicateInstance.bounds.map(astForLifetimeAsParam(filename, parentFullname, _))
+    val boundsAst            = lifetimeWherePredicateInstance.bounds.map(astForLifetime(filename, parentFullname, _))
 
     var code =
       s"${codeForLifetime(filename, parentFullname, lifetimeWherePredicateInstance.lifetime)}"
@@ -79,9 +86,28 @@ trait AstForWherePredicate(implicit schemaValidationMode: ValidationMode) { this
       .withChildren(boundsAst ++ lifetimesBouldsAst)
   }
 
+  def astForLifetimeAsArgument(filename: String, parentFullname: String, lifetimeInstance: Lifetime): Ast = {
+    val code = codeForLifetime(filename, parentFullname, lifetimeInstance)
+    val node = NewLifetimeArgument()
+      .name(lifetimeInstance)
+      .code(code)
+
+    Ast(node)
+  }
+
   def astForLifetimeAsParam(filename: String, parentFullname: String, lifetimeInstance: Lifetime): Ast = {
     val code = codeForLifetime(filename, parentFullname, lifetimeInstance)
-    val node = NewTypeParameter().name(lifetimeInstance).code(code)
+    val node = NewLifetimeParameter()
+      .name(lifetimeInstance)
+      .code(code)
+
+    Ast(node)
+  }
+
+  def astForLifetime(filename: String, parentFullname: String, lifetimeInstance: Lifetime): Ast = {
+    val code = codeForLifetime(filename, parentFullname, lifetimeInstance)
+    val node = NewLifetime()
+      .name(lifetimeInstance)
     Ast(node)
   }
 

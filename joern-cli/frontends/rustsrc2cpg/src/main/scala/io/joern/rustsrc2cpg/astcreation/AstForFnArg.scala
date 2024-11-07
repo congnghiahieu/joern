@@ -60,6 +60,14 @@ trait AstForFnArg(implicit schemaValidationMode: ValidationMode) { this: AstCrea
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
     }
+    val typeAst = receiverInstance.ty match {
+      case Some(ty) => astForType(filename, parentFullname, ty)
+      case None     => Ast()
+    }
+    val lifetimeAst = receiverInstance.lifetime match {
+      case Some(lifetime) => astForLifetime(filename, parentFullname, lifetime)
+      case None           => Ast()
+    }
 
     val evaluationStrategy = receiverInstance.ref match {
       case Some(true) => EvaluationStrategies.BY_REFERENCE
@@ -90,6 +98,8 @@ trait AstForFnArg(implicit schemaValidationMode: ValidationMode) { this: AstCrea
     scope.addToScope(name, (node, typeFullname))
 
     Ast(node)
+      .withChild(typeAst)
+      .withChild(lifetimeAst)
       .withChildren(annotationsAst)
   }
 
