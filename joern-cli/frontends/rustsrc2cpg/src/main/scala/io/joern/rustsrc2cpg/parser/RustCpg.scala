@@ -7,20 +7,17 @@ import io.joern.rustsrc2cpg.Config
 import io.joern.rustsrc2cpg.Frontend.defaultConfig
 import io.joern.rustsrc2cpg.ast.*
 import io.joern.rustsrc2cpg.passes.AstCreationPass
-import io.joern.rustsrc2cpg.passes.ModuleResolverPass
+import io.joern.rustsrc2cpg.passes.CrateResolverPass
 import io.joern.rustsrc2cpg.passes.TypeResolverPass
 import io.joern.x2cpg.X2Cpg
 import io.joern.x2cpg.X2CpgFrontend
 import io.joern.x2cpg.passes.frontend.MetaDataPass
 import io.joern.x2cpg.utils.Report
 import io.shiftleft.codepropertygraph.Cpg
+import io.shiftleft.codepropertygraph.generated.Languages
 
 import java.io.File
 import scala.util.Try
-
-object ExtendLanguages {
-  final val RUSTLANG = "RUSTLANG"
-}
 
 class RustCpg extends X2CpgFrontend[Config] {
 
@@ -37,7 +34,7 @@ class RustCpg extends X2CpgFrontend[Config] {
       better.files.File.usingTemporaryDirectory("rustsrc2cpg_tmp") { tempOutputDir =>
         val cargoCrate = CargoCrate(config)
 
-        new MetaDataPass(cpg, ExtendLanguages.RUSTLANG, rootPath).createAndApply()
+        new MetaDataPass(cpg, Languages.RUSTLANG, rootPath).createAndApply()
 
         val astCreationPass = new AstCreationPass(cpg, config, tempOutputDir.path, cargoCrate, report)
         astCreationPass.createAndApply()
@@ -46,7 +43,7 @@ class RustCpg extends X2CpgFrontend[Config] {
           new TypeResolverPass(cpg, astCreationPass.getUsedPrimitiveTypes().toArray(Array.empty[String]))
         typeResolverPass.createAndApply()
 
-        val moduleResovelerPass = new ModuleResolverPass(cpg, cargoCrate)
+        val moduleResovelerPass = new CrateResolverPass(cpg, cargoCrate)
         moduleResovelerPass.createAndApply()
       }
     }

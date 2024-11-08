@@ -9,16 +9,12 @@ import io.joern.console.{ConsoleConfig, CpgConverter}
 import java.nio.file.Path
 import scala.util.Try
 
-object ExtendLanguages {
-  final val RUSTLANG = "RUSTLANG"
-}
-
 object CpgGeneratorFactory {
   private val KNOWN_LANGUAGES = Set(
     Languages.C,
     Languages.CSHARP,
     Languages.GOLANG,
-    ExtendLanguages.RUSTLANG,
+    Languages.RUSTLANG,
     Languages.GHIDRA,
     Languages.JAVA,
     Languages.JAVASCRIPT,
