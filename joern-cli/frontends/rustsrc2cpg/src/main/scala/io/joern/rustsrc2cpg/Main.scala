@@ -1,7 +1,6 @@
 package io.joern.rustsrc2cpg
 
 import better.files.File
-import io.joern.rustsrc2cpg.parser.RustCpg
 import io.joern.x2cpg.X2CpgConfig
 import io.joern.x2cpg.X2CpgMain
 import scopt.OParser

@@ -1,4 +1,4 @@
-package io.joern.rustsrc2cpg.parser
+package io.joern.rustsrc2cpg
 
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -40,11 +40,13 @@ class RustCpg extends X2CpgFrontend[Config] {
         astCreationPass.createAndApply()
 
         val typeResolverPass =
-          new TypeResolverPass(cpg, astCreationPass.getUsedPrimitiveTypes().toArray(Array.empty[String]))
+          new TypeResolverPass(cpg, astCreationPass.getUsedPrimitiveTypes().toSeq)
         typeResolverPass.createAndApply()
 
         val moduleResovelerPass = new CrateResolverPass(cpg, cargoCrate)
         moduleResovelerPass.createAndApply()
+
+        report.print()
       }
     }
   }

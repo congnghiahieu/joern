@@ -8,26 +8,33 @@ import io.joern.rustsrc2cpg.astcreation.AstCreator
 import io.joern.rustsrc2cpg.parser.JsonParser
 import io.joern.x2cpg.Ast
 import io.joern.x2cpg.SourceFiles
-import io.joern.x2cpg.utils.{ExternalCommand, Report, TimeUtils}
+import io.joern.x2cpg.utils.ExternalCommand
+import io.joern.x2cpg.utils.Report
+import io.joern.x2cpg.utils.TimeUtils
 import io.shiftleft.codepropertygraph.Cpg
 import io.shiftleft.passes.ForkJoinParallelCpgPass
 import io.shiftleft.utils.IOUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import scala.sys.process.{Process, ProcessLogger}
-import scala.util.{Failure, Success, Try}
 
 import java.io.File
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.ConcurrentLinkedQueue
-import scala.jdk.CollectionConverters.*
+import java.util.concurrent.TimeUnit
+import scala.collection.mutable.HashSet
 import scala.collection.mutable.ListBuffer
+import scala.jdk.CollectionConverters.*
 import scala.reflect.ClassTag
 import scala.reflect.classTag
+import scala.sys.process.Process
+import scala.sys.process.ProcessLogger
+import scala.util.Failure
+import scala.util.Success
+import scala.util.Try
 import scala.util.matching.Regex
+import io.shiftleft.codepropertygraph.generated.nodes.NewConfigFile
 
 class AstCreationPass(
   cpg: Cpg,
@@ -37,12 +44,12 @@ class AstCreationPass(
   report: Report = new Report()
 ) extends ForkJoinParallelCpgPass[Array[String]](cpg) {
 
-  private val inputRootPath                        = config.inputPath
-  private val sourceFileExtension: Set[String]     = Set(".rs")
-  private val DefaultIgnoredFolders: List[Regex]   = List()
-  private val jsonParser: JsonParser               = new JsonParser()
-  private val usedPrimitiveTypes: util.Set[String] = new util.HashSet[String]()
-  private val logger: Logger                       = LoggerFactory.getLogger(classOf[AstCreator])
+  private val inputRootPath                       = config.inputPath
+  private val sourceFileExtension: Set[String]    = Set(".rs")
+  private val DefaultIgnoredFolders: List[Regex]  = List()
+  private val jsonParser: JsonParser              = new JsonParser()
+  private val usedPrimitiveTypes: HashSet[String] = HashSet.empty
+  private val logger: Logger                      = LoggerFactory.getLogger(classOf[AstCreator])
 
   override def generateParts(): Array[Array[String]] = {
 
@@ -52,7 +59,7 @@ class AstCreationPass(
     val command =
       s"$binaryPath --input ${inputRootPath} --output ${outputDirPath.toString} --stdout --json --cargo-toml"
 
-    runBinary(command) match {
+    runShellCommand(command) match {
       case Success(output) =>
         val outputDir                  = outputDirPath.toFile
         val traverse: ListBuffer[File] = ListBuffer(outputDir)
@@ -77,47 +84,58 @@ class AstCreationPass(
     }
   }
 
-  override def runOnPart(builder: DiffGraphBuilder, filenames: Array[String]): Unit = {
+  override def runOnPart(builder: DiffGraphBuilder, resultFilePaths: Array[String]): Unit = {
     var cargoFileNumber = 0;
     var rustFileNumber  = 0;
 
-    filenames.foreach(filename => {
-      logger.warn("runOnPart: {}", filename)
+    resultFilePaths.foreach(resultFilePath => {
+      logger.warn("runOnPart: {}", resultFilePath)
 
-      if (!filename.endsWith("Cargo.json")) {
-        rustFileNumber += 1;
-        val (gotCpg, duration) = TimeUtils.time {
-          val parsedFileAst = jsonParser.parse(filename)
+      val filePathAbsoluateToCrate =
+        Paths
+          .get(resultFilePath)
+          .toAbsolutePath
+          .toString
+          .replaceFirst(outputDirPath.toString, inputRootPath.toString)
+          .replaceFirst(".json", ".rs")
+      val filePathRelativeToCrate = SourceFiles.toRelativePath(filePathAbsoluateToCrate.toString, inputRootPath)
+      val fileLOC                 = io.shiftleft.utils.IOUtils.readLinesInFile(Paths.get(filePathAbsoluateToCrate)).size
 
-          val filePathAbsoluateToCrate =
-            Paths
-              .get(filename)
-              .toAbsolutePath
-              .toString
-              .replaceFirst(outputDirPath.toString, inputRootPath.toString)
-              .replaceFirst(".json", ".rs")
-          val filePathRelativeToCrate = SourceFiles.toRelativePath(filePathAbsoluateToCrate.toString, inputRootPath)
+      report.addReportInfo(filePathRelativeToCrate, fileLOC, parsed = true)
 
-          val localDiff =
-            new AstCreator(parsedFileAst, filePathRelativeToCrate, cargoCrate, usedPrimitiveTypes)(
-              config.schemaValidation
-            )
-              .createAst()
+      val (gotCpg, duration) = TimeUtils.time {
+        if (!resultFilePath.endsWith("Cargo.json")) {
+          rustFileNumber += 1;
+
+          val parsedFileAst = jsonParser.parse(resultFilePath)
+          val localDiff = new AstCreator(parsedFileAst, filePathRelativeToCrate, cargoCrate, usedPrimitiveTypes)(
+            config.schemaValidation
+          ).createAst()
           builder.absorb(localDiff)
+        } else {
+          cargoFileNumber += 1;
+
+          val fileContent = io.shiftleft.utils.IOUtils.readEntireFile(Paths.get(filePathAbsoluateToCrate))
+          val node = NewConfigFile()
+            .name("Cargo.toml")
+            .content(fileContent)
+          builder.addNode(node)
         }
-      } else {
-        cargoFileNumber += 1;
+
+        true
       }
+
+      report.updateReport(filePathRelativeToCrate, gotCpg, duration)
     })
 
-    logger.info(s"[runOnPart] [${config.inputPath.split("/").last}] fileNames.length: ${filenames.length}")
+    logger.info(s"[runOnPart] [${config.inputPath.split("/").last}] fileNames.length: ${resultFilePaths.length}")
     logger.info(s"[runOnPart] [${config.inputPath.split("/").last}] cargoFileNumber: ${cargoFileNumber}")
     logger.info(s"[runOnPart] [${config.inputPath.split("/").last}] rustFileNumber: ${rustFileNumber}")
   }
 
   def getUsedPrimitiveTypes() = usedPrimitiveTypes
 
-  def runBinary(command: String): Try[Seq[String]] = {
+  def runShellCommand(command: String): Try[Seq[String]] = {
     val stdOutOutput  = new ConcurrentLinkedQueue[String]
     val stdErrOutput  = new ConcurrentLinkedQueue[String]
     val processLogger = ProcessLogger(stdOutOutput.add, stdErrOutput.add)

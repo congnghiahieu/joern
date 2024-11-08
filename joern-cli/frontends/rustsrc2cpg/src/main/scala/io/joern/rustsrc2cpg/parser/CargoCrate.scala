@@ -29,18 +29,6 @@ class CargoCrate(config: Config) {
 
       // if (file.isDirectory) {
       //   traverse.addAll(file.listFiles())
-      // } else if (file.isFile && file.getName.equals("Cargo.toml")) {
-      //   parseGoModFile(file) match {
-      //     case Some(name) => {
-      //       _crateName = name
-      //       _crateIsWorkspace = false
-      //     }
-      //     case None => {
-      //       _crateName = ""
-      //       _crateIsWorkspace = false
-      //     }
-      //   }
-      //   _cratePath = file.getParentFile.getAbsolutePath
       // }
       if (file.isFile && file.getName.equals("Cargo.toml")) {
         parseCrateTomlFile(file) match {

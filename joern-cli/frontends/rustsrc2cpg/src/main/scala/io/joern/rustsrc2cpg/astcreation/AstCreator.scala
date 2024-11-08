@@ -8,14 +8,17 @@ import io.joern.x2cpg.AstNodeBuilder
 import io.joern.x2cpg.Defines
 import io.joern.x2cpg.ValidationMode
 import io.joern.x2cpg.datastructures.Scope
+import io.shiftleft.codepropertygraph.generated.DiffGraphBuilder
 import io.shiftleft.codepropertygraph.generated.nodes.*
+import io.shiftleft.semanticcpg.language.types.structure.NamespaceTraversal
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import io.shiftleft.codepropertygraph.generated.DiffGraphBuilder
 
-import java.util
-import scala.collection.mutable.{Map, Set, ListBuffer}
 import java.nio.file.Paths
+import scala.collection.mutable.HashMap
+import scala.collection.mutable.HashSet
+import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.Stack
 
 enum PathCPGNodeType {
   case IDENTIFIER_NODE
@@ -25,11 +28,12 @@ enum PathCPGNodeType {
   case METHODREF_NODE
 }
 
+// Translates the Rust AST (Syn library) into a CPG AST.
 class AstCreator(
   rootNode: FileAst,
   filePathCompareToCrate: String,
   cargoCrate: CargoCrate,
-  protected var usedPrimitiveTypes: util.Set[String]
+  protected var usedPrimitiveTypes: HashSet[String]
 )(implicit val validationMode: ValidationMode)
     extends AstCreatorBase(filePathCompareToCrate)
     with AstForAbi
@@ -45,6 +49,7 @@ class AstCreator(
     with AstForGenericArgument
     with CodeForGenericArgument
     with AstForGenericParam
+    with CodeForGenericParam
     with AstForGenerics
     with AstForImplItem
     with AstForItem
@@ -75,14 +80,14 @@ class AstCreator(
     with AstForWherePredicate
     with AstNodeBuilder[RustAst, AstCreator] {
 
-  protected val logger: Logger                                    = LoggerFactory.getLogger(classOf[AstCreator])
-  protected val objectMapper: ObjectMapper                        = ObjectMapper()
-  protected val namespaceStack: util.Stack[NewNode]               = new util.Stack()
-  protected val namespaceMap: util.Map[String, NewNamespaceBlock] = new util.HashMap()
-  protected var globalAst: Option[Ast]                            = None
-  protected val scope: Scope[String, (NewNode, String), NewNode]  = new Scope()
+  protected val logger: Logger                                   = LoggerFactory.getLogger(classOf[AstCreator])
+  protected val objectMapper: ObjectMapper                       = ObjectMapper()
+  protected val namespaceStack: Stack[NewNode]                   = Stack.empty
+  protected val namespaceMap: HashMap[String, NewNamespaceBlock] = HashMap.empty
+  protected var globalAst: Option[Ast]                           = None
+  protected val scope: Scope[String, (NewNode, String), NewNode] = new Scope()
 
-  protected val primitiveTypeSet: Set[String] = Set(
+  protected val primitiveTypeSet: HashSet[String] = HashSet(
     Primitives.BOOL,
     Primitives.CHAR,
     Primitives.STR,
@@ -102,48 +107,49 @@ class AstCreator(
     Primitives.F64,
     Primitives.UNIT
   )
-  protected val typeSet: Set[String]                    = Set().concat(primitiveTypeSet)
-  protected val typeDeclMap: Map[String, NewTypeDecl]   = Map()
-  protected val localNodeMap: Map[String, NewLocal]     = Map()
-  protected val methodNodeMap: Map[String, NewMethod]   = Map()
-  protected val typeNodeMap: Map[String, NewType]       = Map()
-  protected var currentPathCpgNodeType: PathCPGNodeType = PathCPGNodeType.IDENTIFIER_NODE
+  protected val typeSet: HashSet[String]                  = HashSet().concat(primitiveTypeSet)
+  protected val typeDeclMap: HashMap[String, NewTypeDecl] = HashMap.empty
+  protected val localNodeMap: HashMap[String, NewLocal]   = HashMap.empty
+  protected val methodNodeMap: HashMap[String, NewMethod] = HashMap.empty
+  protected val typeNodeMap: HashMap[String, NewType]     = HashMap.empty
+
+  protected var currentPathCpgNodeType: PathCPGNodeType              = PathCPGNodeType.IDENTIFIER_NODE
+  protected def getCurrentPathCpgNodeType: PathCPGNodeType           = currentPathCpgNodeType
+  protected def setCurrentPathCpgNodeType(nodeType: PathCPGNodeType) = currentPathCpgNodeType = nodeType
 
   def createAst(): DiffGraphBuilder = {
-    val ast = astForTranslationUnit(rootNode)
+    val fileNode = NewFile()
+      .name(filePathCompareToCrate)
+      .order(0)
+
+    val ast = Ast(fileNode).withChild(astForTranslationUnit(rootNode))
     Ast.storeInDiffGraph(ast, diffGraph)
-    globalAst = Option(ast)
     diffGraph
   }
 
   private def astForTranslationUnit(root: FileAst): Ast = {
-
-    val parentFullname = ""
+    val parentFullname = NamespaceTraversal.globalNamespaceName
     val namespaceBlock = NewNamespaceBlock()
-      .name(filePathCompareToCrate)
+      .name(filePathCompareToCrate.replaceAll("/", "::").replaceFirst(".rs", ""))
       .filename(filePathCompareToCrate)
       .fullName(Paths.get(cargoCrate.cratePath, filePathCompareToCrate).toString)
-    val namespaceAst = Ast(namespaceBlock)
 
-    namespaceStack.push(namespaceAst.root.get)
+    namespaceStack.push(namespaceBlock)
     scope.pushNewScope(namespaceBlock)
 
     val annotationsAst = root.attrs match {
       case Some(attrs) => attrs.map(astForAttribute(filePathCompareToCrate, parentFullname, _)).toList
       case None        => List()
     }
-    val itemAst = root.items.map(astForItem(filePathCompareToCrate, parentFullname, _)).toList
+    val itemAst      = root.items.map(astForItem(filePathCompareToCrate, parentFullname, _)).toList
+    val childrenAsts = annotationsAst ++ itemAst
+    setArgumentIndices(childrenAsts)
 
     scope.popScope()
     namespaceStack.pop()
 
-    namespaceAst
-      .withChildren(annotationsAst)
-      .withChildren(itemAst)
+    Ast(namespaceBlock).withChildren(childrenAsts)
   }
-
-  def getCurrentPathCpgNodeType: PathCPGNodeType           = currentPathCpgNodeType
-  def setCurrentPathCpgNodeType(nodeType: PathCPGNodeType) = currentPathCpgNodeType = nodeType
 
   //  TODO: Need implements correctly
   protected override def code(node: RustAst): String = ""
