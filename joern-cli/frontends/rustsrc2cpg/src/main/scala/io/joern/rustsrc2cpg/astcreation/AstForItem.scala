@@ -291,7 +291,7 @@ trait AstForItem(implicit schemaValidationMode: ValidationMode) { this: AstCreat
           case Some(content) => content.map(astForItem(filename, parentFullname, _)).toList
           case None          => List()
         }
-        val contentWrapperAst = blockAst(blockNode(UnknownAst(), "{}", ""), contentAst)
+        val contentWrapperAst = Ast(unknownNode(itemMod, code)).withChildren(contentAst)
 
         val modNamespaceBlock = NewNamespaceBlock()
           .name(itemMod.ident)
@@ -436,12 +436,16 @@ trait AstForItem(implicit schemaValidationMode: ValidationMode) { this: AstCreat
       case Some(ty) => typeFullnameForType(filename, parentFullname, ty)
       case None     => Defines.Unknown
     }
-    val code            = s"type ${itemType.ident} = ${typeFullname}"
-    val newItemTypeNode = typeDeclNode(itemType, itemType.ident, itemType.ident, filename, code)
+    var code = s"type ${itemType.ident} = ${typeFullname}"
+    if (modifierNode.modifierType == ModifierTypes.PUBLIC) { code = s"pub ${code}" }
+    val newItemTypeNode =
+      typeDeclNode(itemType, itemType.ident, itemType.ident, filename, code)
+        .aliasTypeFullName(typeFullname)
 
     Ast(newItemTypeNode)
       .withChild(typeAst)
       .withChild(genericsAst)
+      .withChild(Ast(modifierNode))
       .withChildren(annotationsAst)
   }
 

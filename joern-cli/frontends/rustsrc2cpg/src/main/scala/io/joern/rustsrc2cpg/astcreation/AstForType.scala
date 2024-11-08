@@ -97,7 +97,7 @@ trait AstForType(implicit schemaValidationMode: ValidationMode) { this: AstCreat
   def astForTypePath(filename: String, parentFullname: String, typePathInstance: TypePath): Ast = {
     setCurrentPathCpgNodeType(PathCPGNodeType.TYPEREF_NODE)
     val path    = Path(typePathInstance.segments, typePathInstance.leading_colon)
-    val pathAst = astForPath(filename, parentFullname, path)
+    val pathAst = astForPath(filename, parentFullname, path, typePathInstance.qself)
 
     pathAst
   }
@@ -202,15 +202,45 @@ trait TypeFullnameForType(implicit schemaValidationMode: ValidationMode) { this:
   }
 
   def typeFullnameForTypeBareFn(filename: String, parentFullname: String, typeBareFnInstance: TypeBareFn): String = {
-    // Lack
-    val typeFullname = ""
-    typeFullname
+    val inputsCode = typeBareFnInstance.inputs.map(codeForBareFnArg(filename, parentFullname, _)).toList
+    val variadicCode = typeBareFnInstance.variadic match {
+      case Some(variadic) => List(codeForBareVariadic(filename, parentFullname, variadic))
+      case _              => List()
+    }
+    val totalInputCode = (inputsCode ++ variadicCode).mkString(", ")
+
+    var code = typeBareFnInstance.output match {
+      case Some(output) => {
+        val outputCode = typeFullnameForType(filename, parentFullname, output)
+        s"fn($totalInputCode) -> $outputCode"
+      }
+      case None => s"fn($totalInputCode)"
+    }
+
+    code = typeBareFnInstance.unsafe match {
+      case Some(true) => s"unsafe $code"
+      case _          => code
+    }
+
+    code = typeBareFnInstance.lifetimes match {
+      case Some(boundLifetimes) => {
+        val boundLifetimeCode =
+          s"for <${boundLifetimes.map(codeForGenericParam(filename, parentFullname, _)).mkString(", ")}>"
+        s"$boundLifetimeCode $code"
+      }
+      case None => code
+    }
+
+    code
   }
 
   def typeFullnameForTypeGroup(filename: String, parentFullname: String, typeGroupInstance: TypeGroup): String = {
-    // Lack
-    val typeFullname = ""
-    typeFullname
+    // Temporary
+    val typeFullname = typeGroupInstance.elem match {
+      case Some(elem) => typeFullnameForType(filename, parentFullname, elem)
+      case None       => Defines.Unknown
+    }
+    s"($typeFullname)"
   }
 
   def typeFullnameForTypeImplTrait(
@@ -224,9 +254,9 @@ trait TypeFullnameForType(implicit schemaValidationMode: ValidationMode) { this:
   }
 
   def typeFullnameForTypeMacro(filename: String, parentFullname: String, typeMacroInstance: TypeMacro): String = {
-    // Lack
-    val typeFullname = ""
-    typeFullname
+    val macroInstance = Macro(typeMacroInstance.path, typeMacroInstance.delimiter, typeMacroInstance.tokens)
+    val (_, _, code)  = codeForMacro(filename, parentFullname, macroInstance)
+    code
   }
 
   def typeFullnameForTypeParen(filename: String, parentFullname: String, typeParenInstance: TypeParen): String = {
@@ -242,7 +272,12 @@ trait TypeFullnameForType(implicit schemaValidationMode: ValidationMode) { this:
 
   def typeFullnameForTypePath(filename: String, parentFullname: String, typePathInstance: TypePath): String = {
     val typeFullname =
-      typeFullnameForPath(filename, parentFullname, Path(typePathInstance.segments, typePathInstance.leading_colon))
+      typeFullnameForPath(
+        filename,
+        parentFullname,
+        Path(typePathInstance.segments, typePathInstance.leading_colon),
+        typePathInstance.qself
+      )
     typeFullname
   }
 

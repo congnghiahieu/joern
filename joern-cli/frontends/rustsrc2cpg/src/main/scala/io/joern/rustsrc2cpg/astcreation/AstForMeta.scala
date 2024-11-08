@@ -28,9 +28,8 @@ trait AstForMeta(implicit schemaValidationMode: ValidationMode) { this: AstCreat
       throw new IllegalArgumentException("Unsupported meta type")
     }
   }
-  def astForPath(filename: String, parentFullname: String, pathInstance: Path): Ast = {
-    val (fullname, _, code) = codeForPath(filename, parentFullname, pathInstance)
-
+  def astForPath(filename: String, parentFullname: String, pathInstance: Path, qself: Option[QSelf] = None): Ast = {
+    val (fullname, _, code) = codeForPath(filename, parentFullname, pathInstance, qself)
     getCurrentPathCpgNodeType match {
       case PathCPGNodeType.IDENTIFIER_NODE => {
         val node = identifierNode(pathInstance, fullname, fullname, "")
@@ -104,10 +103,16 @@ trait CodeForMeta(implicit schemaValidationMode: ValidationMode) { this: AstCrea
     }
   }
 
-  def codeForPath(filename: String, parentFullname: String, pathInstance: Path): CodeForReturnType = {
-    val typeFullname = typeFullnameForPath(filename, parentFullname, pathInstance)
-    val code         = typeFullname
-    (typeFullname, "", code)
+  def codeForPath(
+    filename: String,
+    parentFullname: String,
+    pathInstance: Path,
+    qself: Option[QSelf] = None
+  ): CodeForReturnType = {
+    val typeFullname = typeFullnameForPath(filename, parentFullname, pathInstance, qself)
+    val input        = typeFullname // temporary
+    val code         = typeFullname // temporary
+    (typeFullname, input, code)
   }
 
   def codeForMetaList(filename: String, parentFullname: String, metaListInstance: MetaList): CodeForReturnType = {
@@ -156,22 +161,61 @@ trait CodeForMeta(implicit schemaValidationMode: ValidationMode) { this: AstCrea
     (typeFullname, exprValue, code)
   }
 
-  def typeFullnameForPath(filename: String, parentFullname: String, pathInstance: Path): String = {
-    val (identParts, indetFullString) = typeFullnameForListPathSegment(filename, parentFullname, pathInstance.segments)
-    val typeFullname = pathInstance.leading_colon match {
-      case Some(_) => s"::${indetFullString}"
-      case None    => indetFullString
+  def typeFullnameForPath(
+    filename: String,
+    parentFullname: String,
+    pathInstance: Path,
+    qself: Option[QSelf] = None
+  ): String = {
+    qself match {
+      case Some(qself) => {
+        val typeFullnameOfQself = qself.ty match {
+          case Some(ty) => typeFullnameForType(filename, parentFullname, ty)
+          case None     => Defines.Unknown
+        }
+        val segments = typeFullnameForListPathSegments(filename, parentFullname, pathInstance.segments)
+
+        qself.position match {
+          case 0 => {
+            pathInstance.leading_colon match {
+              case Some(true) => s"<$typeFullnameOfQself>::${segments.head}"
+              case _          => s"<$typeFullnameOfQself>${segments.head}"
+            }
+          }
+          case _ => {
+            val targetedSegment           = segments.remove(qself.position)
+            val otherSegmentsAsFullString = segments.mkString("::")
+
+            qself.as_token match {
+              case Some(true) => {
+                s"<$typeFullnameOfQself as ${otherSegmentsAsFullString}>::$targetedSegment"
+              }
+              case _ => {
+                s"${typeFullnameOfQself} ${otherSegmentsAsFullString}::$targetedSegment"
+              }
+            }
+          }
+        }
+      }
+      case None => {
+        val identFullString =
+          typeFullnameForListPathSegments(filename, parentFullname, pathInstance.segments).mkString("::")
+        val typeFullname = pathInstance.leading_colon match {
+          case Some(_) => s"::${identFullString}"
+          case None    => identFullString
+        }
+        typeFullname
+      }
     }
-    typeFullname
   }
 
-  def typeFullnameForListPathSegment(
+  def typeFullnameForListPathSegments(
     filename: String,
     parentFullname: String,
     listPathSegments: ListBuffer[PathSegment]
-  ): (ListBuffer[String], String) = {
+  ): ListBuffer[String] = {
     val segmentIdents = listPathSegments.map(typeFullnameForPathSegment(filename, parentFullname, _))
-    (segmentIdents, segmentIdents.mkString("::"))
+    segmentIdents
   }
 
   def typeFullnameForPathSegment(filename: String, parentFullname: String, pathSegmentInstance: PathSegment): String = {

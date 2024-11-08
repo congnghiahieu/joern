@@ -157,9 +157,4 @@ trait AstForImplItem(implicit schemaValidationMode: ValidationMode) { this: AstC
     Ast(memberNode(macroImplItemInstance, "", "", ""))
       .withChild(macroAst)
   }
-
-  def astForQself(filename: String, parentFullname: String, qselfInstance: QSelf): Ast = {
-    val qselfAst = NewTypeParameter()
-    Ast(qselfAst)
-  }
 }

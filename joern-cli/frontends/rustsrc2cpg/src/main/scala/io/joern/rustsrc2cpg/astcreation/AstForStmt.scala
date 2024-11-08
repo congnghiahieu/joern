@@ -21,8 +21,12 @@ import scala.collection.mutable.ListBuffer
 trait AstForStmt(implicit schemaValidationMode: ValidationMode) { this: AstCreator =>
 
   def astForBlock(filename: String, parentFullname: String, blockInstance: Block): Ast = {
-    val node     = blockNode(UnknownAst(), "{}", "")
+    val node = blockNode(UnknownAst(), "{}", "")
+
+    scope.pushNewScope(node)
     val stmtsAst = blockInstance.map(astForStmt(filename, parentFullname, _)).toList
+    scope.popScope()
+
     blockAst(node, stmtsAst)
   }
 
@@ -93,7 +97,7 @@ trait AstForStmt(implicit schemaValidationMode: ValidationMode) { this: AstCreat
       case Some(diverge) => {
         val divergeExpr = astForExpr(filename, parentFullname, diverge)
         val elseNode    = controlStructureNode(ExprElse(), ControlStructureTypes.ELSE, "")
-        controlStructureAst(elseNode, None).withChild(divergeExpr)
+        controlStructureAst(elseNode, None, Seq(divergeExpr))
       }
       case None => Ast()
     }

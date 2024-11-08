@@ -30,8 +30,9 @@ trait AstForMacro(implicit schemaValidationMode: ValidationMode) { this: AstCrea
     // Macro function is built in or some time imported but can not specify
 
     val callExprNode =
-      callNode(macroInstance, code, methodFullName, methodFullName, DispatchTypes.STATIC_DISPATCH, None, None)
-    callAst(callExprNode, Seq(pathAst, argAst))
+      callNode(macroInstance, code, methodFullName, methodFullName, DispatchTypes.INLINED, None, None)
+    callAst(callExprNode, Seq(argAst))
+      .withChild(pathAst)
   }
 
   def codeForMacro(filename: String, parentFullname: String, macroInstance: Macro): (String, String, String) = {

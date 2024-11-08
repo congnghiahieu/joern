@@ -93,7 +93,6 @@ trait AstForFnArg(implicit schemaValidationMode: ValidationMode) { this: AstCrea
     }
     val code = s"${codePrefix} self"
 
-    // val node = parameterInNode(receiverInstance, name, code, -1, false, evaluationStrategy, typeFullname)
     val node = newThisParameterNode(name, code, typeFullname, evaluationStrategy = evaluationStrategy)
     scope.addToScope(name, (node, typeFullname))
 
@@ -108,8 +107,17 @@ trait AstForFnArg(implicit schemaValidationMode: ValidationMode) { this: AstCrea
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
     }
-    val node = parameterInNode(bareFnArgInstance, "", "", 0, false, EvaluationStrategies.BY_VALUE, "")
+    val code = codeForBareFnArg(filename, parentFullname, bareFnArgInstance)
+    val node = parameterInNode(bareFnArgInstance, "", code, 0, false, EvaluationStrategies.BY_VALUE, "")
     Ast(node).withChildren(annotationsAst)
+  }
+
+  def codeForBareFnArg(filename: String, parentFullname: String, bareFnArgInstance: BareFnArg): String = {
+    var code = bareFnArgInstance.ty match {
+      case Some(ty) => typeFullnameForType(filename, parentFullname, ty)
+      case None     => Defines.Unknown
+    }
+    code
   }
 
   def astForBareVariadic(filename: String, parentFullname: String, bareVariadicInstance: BareVariadic): Ast = {
@@ -117,7 +125,17 @@ trait AstForFnArg(implicit schemaValidationMode: ValidationMode) { this: AstCrea
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
     }
-    val node = parameterInNode(bareVariadicInstance, "", "", 0, false, EvaluationStrategies.BY_VALUE, "")
+    val code = codeForBareVariadic(filename, parentFullname, bareVariadicInstance)
+    val node = parameterInNode(bareVariadicInstance, "", code, 0, false, EvaluationStrategies.BY_VALUE, "")
     Ast(node).withChildren(annotationsAst)
+  }
+
+  def codeForBareVariadic(filename: String, parentFullname: String, bareVariadicInstance: BareVariadic): String = {
+    // Implement the logic to generate the code string for BareVariadic
+    val code = bareVariadicInstance.name match {
+      case Some(name) => s"${name}: ..."
+      case None       => "..."
+    }
+    code
   }
 }

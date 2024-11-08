@@ -162,6 +162,8 @@ and use `withChild` instead of `withChildren` for `genericsAst`
 
 For example: `unknownNode(UnknownAst(), "")` to `unknownNode(referencePatInstance, "")`
 
+- generate simple examples for all kinds of common Java syntax (generate simple example for each kind of syntax only)
+
 # Enum
 
 - `AttrStyle` ->
@@ -541,3 +543,9 @@ val METHOD_REF_NODE = "METHOD_REF_NODE"
 - TypePath - TYPE_REF_NODE
 - UsePath - Namespace
 - VisibilityRestricted - TYPE_REF_NODE
+
+TypePath
+PatStruct
+PatTupleStruct
+ExprStruct
+ExprPath

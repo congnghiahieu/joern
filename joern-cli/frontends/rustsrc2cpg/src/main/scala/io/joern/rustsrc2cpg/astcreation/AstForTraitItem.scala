@@ -97,6 +97,7 @@ trait AstForTraitItem(implicit schemaValidationMode: ValidationMode) { this: Ast
     val methodAst = traitItemFn.default match {
       case Some(default) => {
         val blockAst = astForBlock(filename, parentFullname, default)
+
         methodAstWithAnnotations(
           newMethodNode,
           parameterIns :+ variadicAst,

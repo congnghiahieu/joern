@@ -99,32 +99,18 @@ trait AstForFields(implicit schemaValidationMode: ValidationMode) { this: AstCre
       case Some(ty) => typeFullnameForType(filename, parentFullname, ty)
       case None     => Defines.Unknown
     }
+    val name = fieldInstance.ident match {
+      case Some(ident) => ident
+      case None        => Defines.Unknown
+    }
     val code = codeForField(filename, parentFullname, fieldInstance)
-    val node = memberNode(fieldInstance, code, code, typeFullname)
+    val node = memberNode(fieldInstance, name, code, typeFullname)
       .astParentFullName(parentFullname)
 
-    fieldInstance.ident match {
-      case Some(ident) => {
-        val identNode = identifierNode(fieldInstance, ident, ident, typeFullname)
-        val identAst = localNodeMap.get(ident) match {
-          case Some(localNode) => {
-            Ast(identNode).withRefEdge(identNode, localNode)
-          }
-          case None => Ast(identNode)
-        }
-
-        Ast(node)
-          .withChild(identAst)
-          .withChild(typeAst)
-          .withChild(Ast(modifierNode))
-          .withChildren(annotationsAst)
-      }
-      case None =>
-        Ast(node)
-          .withChild(typeAst)
-          .withChild(Ast(modifierNode))
-          .withChildren(annotationsAst)
-    }
+    Ast(node)
+      .withChild(typeAst)
+      .withChild(Ast(modifierNode))
+      .withChildren(annotationsAst)
   }
 }
 

@@ -37,13 +37,7 @@ trait AstForGenericParam(implicit schemaValidationMode: ValidationMode) { this: 
     val lifetimePredicateAst = astForLifetimeAsParam(filename, parentFullname, lifetimeParamInstance.lifetime)
     val boundsAst            = lifetimeParamInstance.bounds.map(astForLifetime(filename, parentFullname, _))
 
-    var code =
-      s"${codeForLifetime(filename, parentFullname, lifetimeParamInstance.lifetime)}"
-    code = lifetimeParamInstance.bounds.nonEmpty match {
-      case true =>
-        s"$code: ${lifetimeParamInstance.bounds.map(codeForLifetime(filename, parentFullname, _)).mkString(" + ")}"
-      case false => code
-    }
+    val code = codeForLifetimeGenericParam(filename, parentFullname, lifetimeParamInstance)
 
     Ast(unknownNode(lifetimeParamInstance, code))
       .withChild(lifetimePredicateAst)
@@ -62,16 +56,7 @@ trait AstForGenericParam(implicit schemaValidationMode: ValidationMode) { this: 
       case None          => Ast()
     }
 
-    var code = typeParamInstance.ident
-    code = typeParamInstance.bounds.nonEmpty match {
-      case true =>
-        s"$code: ${typeParamInstance.bounds.map(codeForTypeParamBound(filename, parentFullname, _)).mkString(" + ")}"
-      case false => code
-    }
-    code = typeParamInstance.default match {
-      case Some(default) => s"$code = ${typeFullnameForType(filename, parentFullname, default)}"
-      case None          => code
-    }
+    val code = codeForTypeGenericParam(filename, parentFullname, typeParamInstance)
 
     val typeParameterNode = NewTypeParameter()
       .name(typeParamInstance.ident)
@@ -98,15 +83,7 @@ trait AstForGenericParam(implicit schemaValidationMode: ValidationMode) { this: 
       case None          => Ast()
     }
 
-    val typeFullname = constParamInstance.ty match {
-      case Some(ty) => typeFullnameForType(filename, parentFullname, ty)
-      case None     => Defines.Unknown
-    }
-    var code = s"const ${constParamInstance.ident}: $typeFullname"
-    code = constParamInstance.default match {
-      case Some(default) => s"$code = ${codeForExpr(filename, parentFullname, default)}"
-      case None          => code
-    }
+    val code = codeForConstGenericParam(filename, parentFullname, constParamInstance)
 
     val typeParameterNode = NewTypeParameter()
       .name(constParamInstance.ident)
@@ -117,5 +94,60 @@ trait AstForGenericParam(implicit schemaValidationMode: ValidationMode) { this: 
       .withChild(typeAst)
       .withChild(deafaulAst)
       .withChildren(annotationsAst)
+  }
+}
+
+trait CodeForGenericParam { this: AstCreator =>
+  def codeForGenericParam(filename: String, parentFullname: String, genericParamInstance: GenericParam): String = {
+    if (genericParamInstance.lifetimeGenericParam.isDefined) {
+      codeForLifetimeGenericParam(filename, parentFullname, genericParamInstance.lifetimeGenericParam.get)
+    } else if (genericParamInstance.typeGenericParam.isDefined) {
+      codeForTypeGenericParam(filename, parentFullname, genericParamInstance.typeGenericParam.get)
+    } else if (genericParamInstance.constGenericParam.isDefined) {
+      codeForConstGenericParam(filename, parentFullname, genericParamInstance.constGenericParam.get)
+    } else {
+      throw new IllegalArgumentException("Unsupported generic param type")
+    }
+  }
+
+  def codeForLifetimeGenericParam(
+    filename: String,
+    parentFullname: String,
+    lifetimeParamInstance: LifetimeParam
+  ): String = {
+    var code = s"${codeForLifetime(filename, parentFullname, lifetimeParamInstance.lifetime)}"
+    code = lifetimeParamInstance.bounds.nonEmpty match {
+      case true =>
+        s"$code: ${lifetimeParamInstance.bounds.map(codeForLifetime(filename, parentFullname, _)).mkString(" + ")}"
+      case false => code
+    }
+    code
+  }
+
+  def codeForTypeGenericParam(filename: String, parentFullname: String, typeParamInstance: TypeParam): String = {
+    var code = typeParamInstance.ident
+    code = typeParamInstance.bounds.nonEmpty match {
+      case true =>
+        s"$code: ${typeParamInstance.bounds.map(codeForTypeParamBound(filename, parentFullname, _)).mkString(" + ")}"
+      case false => code
+    }
+    code = typeParamInstance.default match {
+      case Some(default) => s"$code = ${typeFullnameForType(filename, parentFullname, default)}"
+      case None          => code
+    }
+    code
+  }
+
+  def codeForConstGenericParam(filename: String, parentFullname: String, constParamInstance: ConstParam): String = {
+    val typeFullname = constParamInstance.ty match {
+      case Some(ty) => typeFullnameForType(filename, parentFullname, ty)
+      case None     => Defines.Unknown
+    }
+    var code = s"const ${constParamInstance.ident}: $typeFullname"
+    code = constParamInstance.default match {
+      case Some(default) => s"$code = ${codeForExpr(filename, parentFullname, default)}"
+      case None          => code
+    }
+    code
   }
 }

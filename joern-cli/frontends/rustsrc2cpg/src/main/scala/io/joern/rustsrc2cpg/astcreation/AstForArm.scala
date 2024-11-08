@@ -34,16 +34,20 @@ trait AstForArm(implicit schemaValidationMode: ValidationMode) { this: AstCreato
       case Some(guard) => astForExpr(filename, armNode.parserTypeName, guard)
       case None        => Ast()
     }
-    var conditionAst = blockAst(blockNode(UnknownAst(), "{}", ""), List(patAst, guardAst))
-    val bodyAst      = arm.body.toList.map(astForExpr(filename, armNode.parserTypeName, _))
+    val conditionAst = Ast(unknownNode(UnknownAst(), "")).withChildren(List(patAst, guardAst))
+    val bodyAst = arm.body match {
+      case Some(body) => astForExpr(filename, armNode.parserTypeName, body)
+      case None       => Ast()
+    }
 
-    controlStructureAst(armNode, Some(conditionAst), bodyAst)
+    controlStructureAst(armNode, Some(conditionAst), Seq(bodyAst))
       .withChildren(annotationsAst)
   }
 
   def astForLabel(filename: String, parentFullname: String, label: Label): Ast = {
-    val code      = s"'${label}:"
-    val labelNode = jumpTargetNode(UnknownAst(), label, code).parserTypeName(classOf[Label].getSimpleName())
+    val code = s"'${label}:"
+    val labelNode = jumpTargetNode(UnknownAst(), label, code)
+      .parserTypeName(classOf[Label].getSimpleName())
     Ast(labelNode)
   }
 }

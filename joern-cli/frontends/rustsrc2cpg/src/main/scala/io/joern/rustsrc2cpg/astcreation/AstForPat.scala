@@ -165,13 +165,9 @@ trait AstForPat(implicit schemaValidationMode: ValidationMode) { this: AstCreato
 
     setCurrentPathCpgNodeType(PathCPGNodeType.TYPEREF_NODE)
     val pathAst = structPatInstance.path match {
-      case Some(path) => astForPath(filename, parentFullname, path)
+      case Some(path) => astForPath(filename, parentFullname, path, structPatInstance.qself)
       case None       => Ast()
     }
-    // val qselfAst = structPatInstance.qself match {
-    //   case Some(qself) => astForQself(filename, parentFullname, qself)
-    //   case None        => Ast()
-    // }
 
     val fieldsAst = structPatInstance.fields.map(astForFieldPat(filename, parentFullname, _)).toList
     val restAst = structPatInstance.rest match {
@@ -181,7 +177,6 @@ trait AstForPat(implicit schemaValidationMode: ValidationMode) { this: AstCreato
 
     Ast(unknownNode(structPatInstance, ""))
       .withChild(pathAst)
-      // .withChild(qselfAst)
       .withChildren(fieldsAst)
       .withChild(restAst)
       .withChildren(annotationsAst)
@@ -208,8 +203,9 @@ trait AstForPat(implicit schemaValidationMode: ValidationMode) { this: AstCreato
       case None        => List()
     }
 
+    setCurrentPathCpgNodeType(PathCPGNodeType.TYPEREF_NODE)
     val pathAst = tupleStructPatInstance.path match {
-      case Some(path) => astForPath(filename, parentFullname, path)
+      case Some(path) => astForPath(filename, parentFullname, path, tupleStructPatInstance.qself)
       case None       => Ast()
     }
 
