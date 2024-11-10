@@ -1,196 +1,301 @@
 {
-  "attrs": [
-    {
-      "style": "inner",
-      "meta": {
-        "name_value": {
-          "path": {
-            "segments": [
-              {
-                "ident": "crate_type"
-              }
-            ]
-          },
-          "value": {
-            "lit": {
-              "str": "\"lib\""
-            }
-          }
-        }
-      }
-    }
-  ],
   "items": [
     {
-      "fn": {
-        "attrs": [
+      "mod": {
+        "vis": "pub",
+        "ident": "color",
+        "content": [
           {
-            "style": "outer",
-            "meta": {
-              "path": {
-                "segments": [
+            "struct": {
+              "vis": "pub",
+              "ident": "Color",
+              "fields": {
+                "unnamed": [
                   {
-                    "ident": "test"
+                    "vis": "pub",
+                    "ty": {
+                      "path": {
+                        "segments": [
+                          {
+                            "ident": "u8"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "vis": "pub",
+                    "ty": {
+                      "path": {
+                        "segments": [
+                          {
+                            "ident": "u8"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "vis": "pub",
+                    "ty": {
+                      "path": {
+                        "segments": [
+                          {
+                            "ident": "u8"
+                          }
+                        ]
+                      }
+                    }
                   }
                 ]
               }
             }
+          },
+          {
+            "impl": {
+              "self_ty": {
+                "path": {
+                  "segments": [
+                    {
+                      "ident": "Color"
+                    }
+                  ]
+                }
+              },
+              "items": [
+                {
+                  "const": {
+                    "vis": "pub",
+                    "ident": "WHITE",
+                    "ty": {
+                      "path": {
+                        "segments": [
+                          {
+                            "ident": "Color"
+                          }
+                        ]
+                      }
+                    },
+                    "expr": {
+                      "call": {
+                        "func": {
+                          "path": {
+                            "segments": [
+                              {
+                                "ident": "Color"
+                              }
+                            ]
+                          }
+                        },
+                        "args": [
+                          {
+                            "lit": {
+                              "int": "255"
+                            }
+                          },
+                          {
+                            "lit": {
+                              "int": "255"
+                            }
+                          },
+                          {
+                            "lit": {
+                              "int": "255"
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              ]
+            }
           }
-        ],
-        "ident": "test_foo",
-        "inputs": [],
-        "output": null,
-        "stmts": []
+        ]
       }
     },
     {
       "mod": {
-        "attrs": [
+        "ident": "values",
+        "content": [
           {
-            "style": "outer",
-            "meta": {
-              "list": {
+            "use": {
+              "tree": {
+                "path": {
+                  "ident": "super",
+                  "tree": {
+                    "path": {
+                      "ident": "color",
+                      "tree": {
+                        "ident": "Color"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "impl": {
+              "self_ty": {
                 "path": {
                   "segments": [
                     {
-                      "ident": "cfg"
+                      "ident": "Color"
                     }
                   ]
-                },
-                "delimiter": "paren",
-                "tokens": [
-                  {
-                    "ident": "target_os"
-                  },
-                  {
-                    "punct": {
-                      "op": "=",
-                      "spacing": "alone"
-                    }
-                  },
-                  {
-                    "lit": "\"linux\""
+                }
+              },
+              "items": [
+                {
+                  "fn": {
+                    "vis": "pub",
+                    "ident": "red",
+                    "inputs": [],
+                    "output": {
+                      "path": {
+                        "segments": [
+                          {
+                            "ident": "Color"
+                          }
+                        ]
+                      }
+                    },
+                    "stmts": [
+                      {
+                        "expr": [
+                          {
+                            "call": {
+                              "func": {
+                                "path": {
+                                  "segments": [
+                                    {
+                                      "ident": "Color"
+                                    }
+                                  ]
+                                }
+                              },
+                              "args": [
+                                {
+                                  "lit": {
+                                    "int": "255"
+                                  }
+                                },
+                                {
+                                  "lit": {
+                                    "int": "0"
+                                  }
+                                },
+                                {
+                                  "lit": {
+                                    "int": "0"
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          false
+                        ]
+                      }
+                    ]
                   }
-                ]
-              }
+                }
+              ]
             }
           }
-        ],
-        "ident": "bar",
-        "content": []
+        ]
       }
     },
     {
-      "type": {
-        "attrs": [
-          {
-            "style": "outer",
-            "meta": {
-              "list": {
-                "path": {
-                  "segments": [
-                    {
-                      "ident": "allow"
-                    }
-                  ]
-                },
-                "delimiter": "paren",
-                "tokens": [
-                  {
-                    "ident": "non_camel_case_types"
-                  }
-                ]
+      "use": {
+        "vis": "pub",
+        "tree": {
+          "path": {
+            "ident": "self",
+            "tree": {
+              "path": {
+                "ident": "color",
+                "tree": {
+                  "ident": "Color"
+                }
               }
             }
-          }
-        ],
-        "ident": "int8_t",
-        "ty": {
-          "path": {
-            "segments": [
-              {
-                "ident": "i8"
-              }
-            ]
           }
         }
       }
     },
     {
       "fn": {
-        "attrs": [
-          {
-            "style": "inner",
-            "meta": {
-              "list": {
-                "path": {
-                  "segments": [
-                    {
-                      "ident": "allow"
-                    }
-                  ]
-                },
-                "delimiter": "paren",
-                "tokens": [
-                  {
-                    "ident": "unused_variables"
-                  }
-                ]
-              }
-            }
-          }
-        ],
-        "ident": "some_unused_variables",
+        "ident": "main",
         "inputs": [],
         "output": null,
         "stmts": [
           {
-            "let": {
-              "pat": {
-                "ident": {
-                  "ident": "x"
+            "expr": [
+              {
+                "path": {
+                  "segments": [
+                    {
+                      "ident": "color"
+                    },
+                    {
+                      "ident": "Color"
+                    },
+                    {
+                      "ident": "WHITE"
+                    }
+                  ]
                 }
               },
-              "init": {
-                "expr": {
-                  "tuple": {
-                    "elems": []
-                  }
-                }
-              }
-            }
+              true
+            ]
           },
           {
-            "let": {
-              "pat": {
-                "ident": {
-                  "ident": "y"
+            "expr": [
+              {
+                "call": {
+                  "func": {
+                    "path": {
+                      "segments": [
+                        {
+                          "ident": "color"
+                        },
+                        {
+                          "ident": "Color"
+                        },
+                        {
+                          "ident": "red"
+                        }
+                      ]
+                    }
+                  },
+                  "args": []
                 }
               },
-              "init": {
-                "expr": {
-                  "tuple": {
-                    "elems": []
-                  }
-                }
-              }
-            }
+              true
+            ]
           },
           {
-            "let": {
-              "pat": {
-                "ident": {
-                  "ident": "z"
+            "expr": [
+              {
+                "call": {
+                  "func": {
+                    "path": {
+                      "segments": [
+                        {
+                          "ident": "Color"
+                        },
+                        {
+                          "ident": "red"
+                        }
+                      ]
+                    }
+                  },
+                  "args": []
                 }
               },
-              "init": {
-                "expr": {
-                  "tuple": {
-                    "elems": []
-                  }
-                }
-              }
-            }
+              true
+            ]
           }
         ]
       }

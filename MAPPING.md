@@ -543,9 +543,3 @@ val METHOD_REF_NODE = "METHOD_REF_NODE"
 - TypePath - TYPE_REF_NODE
 - UsePath - Namespace
 - VisibilityRestricted - TYPE_REF_NODE
-
-TypePath
-PatStruct
-PatTupleStruct
-ExprStruct
-ExprPath

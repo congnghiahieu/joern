@@ -5,10 +5,21 @@ SCRIPT_ABS_DIR=$(dirname $SCRIPT_ABS_PATH)
 ROOT_DIR=$(dirname $(dirname $SCRIPT_ABS_DIR))
 # OUTPUT_DIR=out_$(date +%s)
 OUTPUT_DIR=$ROOT_DIR/out
-CPG_PATH=$ROOT_DIR/joern-cli/frontends/gosrc2cpg/cpg.bin
 DATABASE="neo4j"
 DATABASE_USER="neo4j"
 DATABASE_PASSWORD="12345678"
+
+case $1 in
+"rust")
+  CPG_PATH=$ROOT_DIR/joern-cli/frontends/rustsrc2cpg/cpg.bin
+  ;;
+"go")
+  CPG_PATH=$ROOT_DIR/joern-cli/frontends/gosrc2cpg/cpg.bin
+  ;;
+*)
+  CPG_PATH=$ROOT_DIR/joern-cli/frontends/rustsrc2cpg/cpg.bin
+  ;;
+esac
 
 rm -rf $OUTPUT_DIR
 $ROOT_DIR/joern-export --repr=all --format=neo4jcsv --out=$OUTPUT_DIR $CPG_PATH
