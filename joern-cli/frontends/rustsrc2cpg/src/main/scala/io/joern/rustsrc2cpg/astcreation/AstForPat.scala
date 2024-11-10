@@ -69,16 +69,16 @@ trait AstForPat(implicit schemaValidationMode: ValidationMode) { this: AstCreato
 
     val code = codeForPatIdent(filename, parentFullname, identPatInstance)
     val identNode =
-      identifierNode(identPatInstance, identPatInstance.ident, code, "")
-    val identAst = localNodeMap.get(identPatInstance.ident) match {
-      case Some(localNode) => {
-        Ast(identNode).withRefEdge(identNode, localNode)
-      }
-      case None => Ast(identNode)
-    }
+      identifierNode(identPatInstance, identPatInstance.ident, identPatInstance.ident, "")
+    // val identAst = localNodeMap.get(identPatInstance.ident) match {
+    //   case Some(localNode) => {
+    //     Ast(identNode).withRefEdge(identNode, localNode)
+    //   }
+    //   case None => Ast(identNode)
+    // }
 
     Ast(unknownNode(identPatInstance, code))
-      .withChild(identAst)
+      .withChild(Ast(identNode))
       .withChild(subpatAst)
       .withChildren(annotationsAst)
   }
@@ -126,7 +126,7 @@ trait AstForPat(implicit schemaValidationMode: ValidationMode) { this: AstCreato
     val code = codeForPatReference(filename, parentFullname, referencePatInstance)
     val node = newOperatorCallNode(Operators.addressOf, code)
 
-    callAst(node, List(patAst))
+    callAst(node, Seq(patAst))
       .withChildren(annotationsAst)
   }
 
@@ -248,9 +248,9 @@ trait AstForPat(implicit schemaValidationMode: ValidationMode) { this: AstCreato
       case None        => List()
     }
 
-    val name = "_"
+    val code = codeForPatWild(filename, parentFullname, wildPatInstance)
     val identNode =
-      identifierNode(wildPatInstance, name, name, "")
+      identifierNode(wildPatInstance, code, code, "")
     Ast(identNode)
     // .withChildren(annotationsAst)
   }

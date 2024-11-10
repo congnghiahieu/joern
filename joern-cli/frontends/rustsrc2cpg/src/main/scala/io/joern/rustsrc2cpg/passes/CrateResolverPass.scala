@@ -20,15 +20,15 @@ class CrateResolverPass(cpg: Cpg, cargoCrate: CargoCrate) extends CpgPass(cpg) {
       .fullName(cargoCrate.cratePath)
     builder.addNode(crateNamespace)
 
-    // cpg.file.foreach(file => {
-    //   if (!file.name.equals(NamespaceTraversal.globalNamespaceName)) {
-    //     builder.addEdge(crateNamespace, file, EdgeTypes.AST)
-    //   }
-    // })
-    cpg.namespaceBlock.foreach(namespaceBlock => {
-      if (!namespaceBlock.name.equals(NamespaceTraversal.globalNamespaceName)) {
-        builder.addEdge(crateNamespace, namespaceBlock, EdgeTypes.AST)
+    cpg.file.foreach(file => {
+      if (!file.name.equals(NamespaceTraversal.globalNamespaceName)) {
+        builder.addEdge(crateNamespace, file, EdgeTypes.AST)
       }
     })
+    // cpg.namespaceBlock.foreach(namespaceBlock => {
+    //   if (!namespaceBlock.name.equals(NamespaceTraversal.globalNamespaceName)) {
+    //     builder.addEdge(crateNamespace, namespaceBlock, EdgeTypes.AST)
+    //   }
+    // })
   }
 }

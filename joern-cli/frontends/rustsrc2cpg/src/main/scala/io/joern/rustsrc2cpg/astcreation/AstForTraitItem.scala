@@ -77,13 +77,21 @@ trait AstForTraitItem(implicit schemaValidationMode: ValidationMode) { this: Ast
     }
 
     val newMethodNode = methodNode(traitItemFn, traitItemFn.ident, traitItemFn.ident, "", filename)
-    val parameterIns  = traitItemFn.inputs.map(astForFnArg(filename, parentFullname, _)).toList
+    val parameterIns = traitItemFn.inputs.zipWithIndex.map { case (input, index) =>
+      astForFnArg(filename, parentFullname, input, index)
+    }.toList
     val methodRetNode = traitItemFn.output match {
       case Some(output) => {
         val typeFullname = typeFullnameForType(filename, parentFullname, output)
-        methodReturnNode(UnknownAst(), typeFullname).code(typeFullname)
+        val typeAst      = astForType(filename, parentFullname, output)
+
+        Ast(
+          methodReturnNode(UnknownAst(), typeFullname)
+            .code(typeFullname)
+        )
+          .withChild(typeAst)
       }
-      case None => methodReturnNode(UnknownAst(), "")
+      case None => Ast(methodReturnNode(UnknownAst(), ""))
     }
     val variadicAst = traitItemFn.variadic match {
       case Some(variadic) => astForVariadic(filename, parentFullname, variadic)
@@ -94,26 +102,19 @@ trait AstForTraitItem(implicit schemaValidationMode: ValidationMode) { this: Ast
       case None           => Ast()
     }
 
-    val methodAst = traitItemFn.default match {
-      case Some(default) => {
-        val blockAst = astForBlock(filename, parentFullname, default)
-
-        methodAstWithAnnotations(
-          newMethodNode,
-          parameterIns :+ variadicAst,
-          blockAst,
-          methodRetNode,
-          Nil,
-          annotationsAst
-        ).withChild(genericsAst)
-      }
-      case None =>
-        methodStubAst(newMethodNode, parameterIns :+ variadicAst, methodRetNode)
-          .withChild(genericsAst)
-          .withChildren(annotationsAst)
+    val defaultBodyAst = traitItemFn.default match {
+      case Some(default) => astForBlock(filename, parentFullname, default)
+      case None          => Ast()
     }
 
-    Ast(memberNode(traitItemFn, "", "", ""))
+    val methodAst = Ast(newMethodNode)
+      .withChildren(parameterIns :+ variadicAst)
+      .withChild(defaultBodyAst)
+      .withChild(methodRetNode)
+      .withChildren(annotationsAst)
+      .withChild(genericsAst)
+
+    Ast(memberNode(traitItemFn, traitItemFn.ident, "", ""))
       .withChild(methodAst)
   }
 
@@ -122,15 +123,21 @@ trait AstForTraitItem(implicit schemaValidationMode: ValidationMode) { this: Ast
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
     }
-
     val genericsAst = traitItemType.generics match {
       case Some(generics) => astForGenerics(filename, parentFullname, generics)
       case None           => Ast()
     }
-    val boundsAst = traitItemType.bounds.map(astForTypeParamBound(filename, parentFullname, _)).toList
     val defaultAst = traitItemType.default match {
       case Some(default) => astForType(filename, parentFullname, default)
       case None          => Ast()
+    }
+    val boundsAst = traitItemType.bounds.nonEmpty match {
+      case true =>
+        val boundsCode =
+          traitItemType.bounds.map(codeForTypeParamBound(filename, parentFullname, _)).mkString(" + ")
+        val wrapper = Ast(unknownNode(BoundAst(), boundsCode))
+        wrapper.withChildren(traitItemType.bounds.map(astForTypeParamBound(filename, parentFullname, _)).toList)
+      case false => Ast()
     }
 
     var code = s"type ${traitItemType.ident}"
@@ -147,13 +154,12 @@ trait AstForTraitItem(implicit schemaValidationMode: ValidationMode) { this: Ast
     }
 
     val newTypeDecl = typeDeclNode(traitItemType, traitItemType.ident, traitItemType.ident, filename, code)
-    Ast(memberNode(traitItemType, "", "", ""))
+    Ast(memberNode(traitItemType, traitItemType.ident, code, traitItemType.ident))
       .withChild(Ast(newTypeDecl))
       .withChild(defaultAst)
       .withChild(genericsAst)
-      .withChildren(boundsAst)
+      .withChild(boundsAst)
       .withChildren(annotationsAst)
-
   }
 
   def astForTraitItemMacro(filename: String, parentFullname: String, traitItemMacro: TraitItemMacro): Ast = {

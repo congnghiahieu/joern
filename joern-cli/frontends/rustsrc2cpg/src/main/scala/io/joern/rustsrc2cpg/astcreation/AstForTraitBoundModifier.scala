@@ -16,30 +16,28 @@ import scala.collection.mutable.ListBuffer
 
 trait AstForTraitBoundModifier(implicit schemaValidationMode: ValidationMode) { this: AstCreator =>
   def astForTraitBound(filename: String, parentFullname: String, traitBound: TraitBound): Ast = {
-    val typeFullname = traitBound.path match {
-      case Some(path) => typeFullnameForPath(filename, parentFullname, path)
-      case None       => Defines.Unknown
-    }
-    val code = codeForTraitBound(filename, parentFullname, traitBound)
+    // val lifetimeBoundsAst = traitBound.lifetimes match {
+    //   case Some(lifetimes) => lifetimes.map(astForGenericParam(filename, parentFullname, _))
+    //   case None            => List()
+    // }
 
-    val lifetimeBoundsAst = traitBound.lifetimes match {
-      case Some(lifetimes) => lifetimes.map(astForGenericParam(filename, parentFullname, _))
-      case None            => List()
-    }
+    // setCurrentPathCpgNodeType(PathCPGNodeType.TYPEREF_NODE)
+    // val pathAst = traitBound.path match {
+    //   case Some(path) => astForPath(filename, parentFullname, path)
+    //   case None       => Ast()
+    // }
+    // val code = codeForTraitBound(filename, parentFullname, traitBound)
+
+    // Ast(unknownNode(traitBound, code))
+    //   .withChild(pathAst)
+    //   .withChildren(lifetimeBoundsAst)
 
     setCurrentPathCpgNodeType(PathCPGNodeType.TYPEREF_NODE)
     val pathAst = traitBound.path match {
       case Some(path) => astForPath(filename, parentFullname, path)
       case None       => Ast()
     }
-    val node = NewTypeParameter()
-      .name(typeFullname)
-      .code(code)
-
-    Ast(unknownNode(traitBound, code))
-      .withChild(Ast(node))
-      .withChild(pathAst)
-      .withChildren(lifetimeBoundsAst)
+    pathAst
   }
 
   def codeForTraitBound(filename: String, parentFullname: String, traitBound: TraitBound): String = {

@@ -19,9 +19,8 @@ import io.shiftleft.codepropertygraph.generated.nodes.Block.PropertyDefaults as 
 import scala.collection.mutable.ListBuffer
 
 trait AstForStmt(implicit schemaValidationMode: ValidationMode) { this: AstCreator =>
-
   def astForBlock(filename: String, parentFullname: String, blockInstance: Block): Ast = {
-    val node = blockNode(UnknownAst(), "{}", "")
+    val node = blockNode(WrapperAst(), "{}", "")
 
     scope.pushNewScope(node)
     val stmtsAst = blockInstance.map(astForStmt(filename, parentFullname, _)).toList
@@ -70,20 +69,17 @@ trait AstForStmt(implicit schemaValidationMode: ValidationMode) { this: AstCreat
       case None      => Defines.Unknown
     }
     val code = s"let $name"
-    val node = localNode(localInstance, name, code, "")
-    localNodeMap.put(name, node)
+    // val node = localNode(localInstance, name, code, "")
+    // localNodeMap.put(name, node)
 
-    // setCurrentPathCpgNodeType(PathCPGNodeType.IDENTIFIER_NODE)
-    // val patAst = localInstance.pat match {
-    //   case Some(pat) => astForPat(filename, parentFullname, pat)
-    //   case None      => Ast()
-    // }
-    // val wrapperAst = Ast(unknownNode(UnknownAst(), ""))
-    //   .withChild(Ast(node))
-    //   .withChild(patAst)
+    val patAst = localInstance.pat match {
+      case Some(pat) => astForPat(filename, parentFullname, pat)
+      case None      => Ast()
+    }
 
-    Ast(unknownNode(localInstance, ""))
-      .withChild(Ast(node))
+    Ast(unknownNode(localInstance, code))
+      // .withChild(Ast(node))
+      .withChild(patAst)
       .withChild(localInitAst)
       .withChildren(annotationsAst)
   }
@@ -105,5 +101,62 @@ trait AstForStmt(implicit schemaValidationMode: ValidationMode) { this: AstCreat
     Ast(unknownNode(localInitInstance, ""))
       .withChild(exprAst)
       .withChild(divergeAst)
+  }
+}
+
+trait CodeForStmt(implicit schemaValidationMode: ValidationMode) { this: AstCreator =>
+
+  def codeForBlock(filename: String, parentFullname: String, blockInstance: Block): String = {
+    val stmtsCode = blockInstance.map(codeForStmt(filename, parentFullname, _)).mkString("\n")
+    s"""
+    {$stmtsCode}
+    """.stripMargin
+  }
+
+  def codeForStmt(filename: String, parentFullname: String, stmtInstance: Stmt): String = {
+    if (stmtInstance.letStmt.isDefined) {
+      return codeForLocal(filename, parentFullname, stmtInstance.letStmt.get)
+    } else if (stmtInstance.itemStmt.isDefined) {
+      return "codeForItem"
+    } else if (stmtInstance.exprStmt.isDefined) {
+      return codeForExpr(filename, parentFullname, stmtInstance.exprStmt.get._1)
+    } else if (stmtInstance.macroStmt.isDefined) {
+      return codeForMacroStmt(filename, parentFullname, stmtInstance.macroStmt.get)
+    } else {
+      throw new RuntimeException(s"Unknown fnArg type: $stmtInstance")
+    }
+  }
+
+  def codeForMacroStmt(filename: String, parentFullname: String, macroStmtInstance: StmtMacro): String = {
+    codeForMacro(
+      filename,
+      parentFullname,
+      Macro(macroStmtInstance.path, macroStmtInstance.delimiter, macroStmtInstance.tokens)
+    )._2
+  }
+
+  def codeForLocal(filename: String, parentFullname: String, localInstance: Local): String = {
+    val name = localInstance.pat match {
+      case Some(pat) => codeForPat(filename, parentFullname, pat)
+      case None      => Defines.Unknown
+    }
+    s"let $name"
+  }
+
+  def codeForLocalInit(filename: String, parentFullname: String, localInitInstance: LocalInit): String = {
+    var code = localInitInstance.expr match {
+      case Some(expr) => codeForExpr(filename, parentFullname, expr)
+      case None       => ""
+    }
+    code = localInitInstance.diverge match {
+      case Some(diverge) => {
+        val divergeCode = codeForExpr(filename, parentFullname, diverge)
+        s"""$code else {
+          $divergeCode
+        }""".stripMargin
+      }
+      case None => code
+    }
+    code
   }
 }

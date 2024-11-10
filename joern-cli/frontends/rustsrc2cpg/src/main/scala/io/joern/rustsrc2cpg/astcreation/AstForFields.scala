@@ -18,17 +18,18 @@ trait AstForFields(implicit schemaValidationMode: ValidationMode) { this: AstCre
     fieldsInstance match {
       case fieldsNotUnit: FieldsNotUnit =>
         if (fieldsNotUnit.named.isDefined) {
-          val fieldsNotUnitAst = unknownNode(UnknownAst(), "").parserTypeName("FieldsNamed")
-          val fieldsAst        = fieldsNotUnit.named.get.map(astForField(filename, parentFullname, _))
+          val fieldsNotUnitAst = unknownNode(WrapperAst(), "").parserTypeName("FieldsNamed")
+          val fieldsAst        = fieldsNotUnit.named.get.map(astForField(filename, "FieldsNamed", _))
           Ast(fieldsNotUnitAst).withChildren(fieldsAst)
         } else {
-          val fieldsNotUnitAst = unknownNode(UnknownAst(), "").parserTypeName("FieldsUnnamed")
-          val fieldsAst        = fieldsNotUnit.unnamed.get.map(astForField(filename, parentFullname, _))
+          val fieldsNotUnitAst = unknownNode(WrapperAst(), "").parserTypeName("FieldsUnnamed")
+          val fieldsAst        = fieldsNotUnit.unnamed.get.map(astForField(filename, "FieldsUnnamed", _))
           Ast(fieldsNotUnitAst).withChildren(fieldsAst)
         }
       case fieldsUnit: FieldsUnit =>
-        val fieldsUnitAst = literalNode(fieldsUnit, Primitives.UNIT, "UNIT")
-        Ast(fieldsUnitAst)
+        // val fieldsUnitAst = literalNode(fieldsUnit, Primitives.UNIT, "UNIT")
+        // Ast(fieldsUnitAst)
+        Ast()
     }
   }
 
@@ -104,11 +105,17 @@ trait AstForFields(implicit schemaValidationMode: ValidationMode) { this: AstCre
       case None        => Defines.Unknown
     }
     val code = codeForField(filename, parentFullname, fieldInstance)
-    val node = memberNode(fieldInstance, name, code, typeFullname)
+    val node = memberNode(WrapperAst(), name, code, typeFullname)
       .astParentFullName(parentFullname)
+
+    val identNodeAst = fieldInstance.ident match {
+      case Some(ident) => Ast(identifierNode(fieldInstance, ident, ident, typeFullname))
+      case None        => Ast()
+    }
 
     Ast(node)
       .withChild(typeAst)
+      .withChild(identNodeAst)
       .withChild(Ast(modifierNode))
       .withChildren(annotationsAst)
   }

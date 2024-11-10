@@ -96,10 +96,8 @@ trait AstForType(implicit schemaValidationMode: ValidationMode) { this: AstCreat
 
   def astForTypePath(filename: String, parentFullname: String, typePathInstance: TypePath): Ast = {
     setCurrentPathCpgNodeType(PathCPGNodeType.TYPEREF_NODE)
-    val path    = Path(typePathInstance.segments, typePathInstance.leading_colon)
-    val pathAst = astForPath(filename, parentFullname, path, typePathInstance.qself)
-
-    pathAst
+    val path = Path(typePathInstance.segments, typePathInstance.leading_colon)
+    astForPath(filename, parentFullname, path, typePathInstance.qself)
   }
 
   def astForTypePtr(filename: String, parentFullname: String, typePtrInstance: TypePtr): Ast = {
@@ -250,7 +248,7 @@ trait TypeFullnameForType(implicit schemaValidationMode: ValidationMode) { this:
   ): String = {
     val typeFullname =
       typeImplTraitInstance.bounds.map(codeForTypeParamBound(filename, parentFullname, _)).mkString(" + ")
-    typeFullname
+    s"impl $typeFullname"
   }
 
   def typeFullnameForTypeMacro(filename: String, parentFullname: String, typeMacroInstance: TypeMacro): String = {

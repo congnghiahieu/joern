@@ -16,17 +16,22 @@ import scala.collection.mutable.ListBuffer
 
 trait AstForFnArg(implicit schemaValidationMode: ValidationMode) { this: AstCreator =>
 
-  def astForFnArg(filename: String, parentFullname: String, fnArg: FnArg): Ast = {
+  def astForFnArg(filename: String, parentFullname: String, fnArg: FnArg, parameterIndex: Int): Ast = {
     if (fnArg.receiverFnArg.isDefined) {
-      return astForReceiver(filename, parentFullname, fnArg.receiverFnArg.get)
+      return astForReceiver(filename, parentFullname, fnArg.receiverFnArg.get, parameterIndex)
     } else if (fnArg.typedFnArg.isDefined) {
-      return astForFnArgPatType(filename, parentFullname, fnArg.typedFnArg.get)
+      return astForFnArgPatType(filename, parentFullname, fnArg.typedFnArg.get, parameterIndex)
     } else {
       throw new RuntimeException(s"Unknown fnArg type: $fnArg")
     }
   }
 
-  def astForFnArgPatType(filename: String, parentFullname: String, patTypeInstance: PatType): Ast = {
+  def astForFnArgPatType(
+    filename: String,
+    parentFullname: String,
+    patTypeInstance: PatType,
+    parameterIndex: Int
+  ): Ast = {
     val annotationsAst = patTypeInstance.attrs match {
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
@@ -47,7 +52,7 @@ trait AstForFnArg(implicit schemaValidationMode: ValidationMode) { this: AstCrea
       case true  => EvaluationStrategies.BY_REFERENCE
       case false => EvaluationStrategies.BY_VALUE
     }
-    val node = parameterInNode(patTypeInstance, name, code, -1, false, evaluationStrategy, typeFullname)
+    val node = parameterInNode(patTypeInstance, name, code, parameterIndex, false, evaluationStrategy, typeFullname)
 
     Ast(node)
       .withChild(patAst)
@@ -55,7 +60,7 @@ trait AstForFnArg(implicit schemaValidationMode: ValidationMode) { this: AstCrea
       .withChildren(annotationsAst)
   }
 
-  def astForReceiver(filename: String, parentFullname: String, receiverInstance: Receiver): Ast = {
+  def astForReceiver(filename: String, parentFullname: String, receiverInstance: Receiver, parameterIndex: Int): Ast = {
     val annotationsAst = receiverInstance.attrs match {
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
@@ -93,7 +98,8 @@ trait AstForFnArg(implicit schemaValidationMode: ValidationMode) { this: AstCrea
     }
     val code = s"${codePrefix} self"
 
-    val node = newThisParameterNode(name, code, typeFullname, evaluationStrategy = evaluationStrategy)
+    val node =
+      newThisParameterNode(name, code, typeFullname, evaluationStrategy = evaluationStrategy).index(parameterIndex)
     scope.addToScope(name, (node, typeFullname))
 
     Ast(node)

@@ -42,15 +42,21 @@ trait AstForMeta(implicit schemaValidationMode: ValidationMode) { this: AstCreat
         nodeAst
       }
       case PathCPGNodeType.TYPEREF_NODE => {
-        usedPrimitiveTypes.add(fullname)
         val node = typeRefNode(pathInstance, fullname, fullname)
-        val nodeAst = typeNodeMap.get(fullname) match {
+
+        var nodeAst = typeNodeMap.get(fullname) match {
           case Some(typeNode) => {
             Ast(node).withRefEdge(node, typeNode)
           }
           case None => Ast(node)
         }
-        Ast(node)
+        nodeAst = typeDeclMap.get(fullname) match {
+          case Some(typeDeclNode) => {
+            nodeAst.withRefEdge(node, typeDeclNode)
+          }
+          case None => nodeAst
+        }
+        nodeAst
       }
       case PathCPGNodeType.METHODREF_NODE => {
         val node = methodRefNode(pathInstance, fullname, fullname, "")

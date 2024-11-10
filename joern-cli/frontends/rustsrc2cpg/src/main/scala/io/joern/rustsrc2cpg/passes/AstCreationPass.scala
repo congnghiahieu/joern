@@ -91,13 +91,22 @@ class AstCreationPass(
     resultFilePaths.foreach(resultFilePath => {
       logger.warn("runOnPart: {}", resultFilePath)
 
-      val filePathAbsoluateToCrate =
-        Paths
-          .get(resultFilePath)
-          .toAbsolutePath
-          .toString
-          .replaceFirst(outputDirPath.toString, inputRootPath.toString)
-          .replaceFirst(".json", ".rs")
+      val filePathAbsoluateToCrate = resultFilePath.endsWith("Cargo.json") match {
+        case true =>
+          Paths
+            .get(resultFilePath)
+            .toAbsolutePath
+            .toString
+            .replaceFirst(outputDirPath.toString, inputRootPath.toString)
+            .replaceFirst("\\.json", ".toml")
+        case false =>
+          Paths
+            .get(resultFilePath)
+            .toAbsolutePath
+            .toString
+            .replaceFirst(outputDirPath.toString, inputRootPath.toString)
+            .replaceFirst("\\.json", ".rs")
+      }
       val filePathRelativeToCrate = SourceFiles.toRelativePath(filePathAbsoluateToCrate.toString, inputRootPath)
       val fileLOC                 = io.shiftleft.utils.IOUtils.readLinesInFile(Paths.get(filePathAbsoluateToCrate)).size
 

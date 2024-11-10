@@ -10,7 +10,7 @@ import io.joern.x2cpg.utils.NodeBuilders
 import io.joern.x2cpg.utils.NodeBuilders.newModifierNode
 import io.shiftleft.codepropertygraph.generated.EvaluationStrategies
 import io.shiftleft.codepropertygraph.generated.ModifierTypes
-import io.shiftleft.codepropertygraph.generated.nodes.*
+import io.shiftleft.codepropertygraph.generated.nodes.NewTypeArgument
 
 import scala.collection.mutable.ListBuffer
 
@@ -63,6 +63,8 @@ trait AstForPathArguments(implicit schemaValidationMode: ValidationMode) { this:
     val code      = codeForParenthesizedGenericArguments(filename, parentFullname, parenthesizedInstance)
     val node      = NewTypeArgument().code(code)
     val inputsAst = parenthesizedInstance.inputs.map(astForType(filename, parentFullname, _))
+
+    setCurrentPathCpgNodeType(PathCPGNodeType.TYPEREF_NODE)
     val outputAst = parenthesizedInstance.output match {
       case Some(output) => astForType(filename, parentFullname, output)
       case None         => Ast()

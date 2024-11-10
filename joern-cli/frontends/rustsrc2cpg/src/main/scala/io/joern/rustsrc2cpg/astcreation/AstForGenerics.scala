@@ -15,7 +15,7 @@ import io.shiftleft.codepropertygraph.generated.nodes.*
 import scala.collection.mutable.ListBuffer
 trait AstForGenerics(implicit schemaValidationMode: ValidationMode) { this: AstCreator =>
   def astForGenerics(filename: String, parentFullname: String, generics: Generics): Ast = {
-    var genericsNode = Ast(unknownNode(UnknownAst(), "").parserTypeName(classOf[Generics].getSimpleName))
+    var genericsNode = Ast(unknownNode(WrapperAst(), "").parserTypeName(classOf[Generics].getSimpleName))
 
     if (generics.params.isDefined) {
       val genericParamsAsts = generics.params.get

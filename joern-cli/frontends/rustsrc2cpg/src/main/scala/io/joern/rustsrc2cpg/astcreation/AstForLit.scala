@@ -47,5 +47,6 @@ trait AstForLit(implicit schemaValidationMode: ValidationMode) { this: AstCreato
     }
 
     usedPrimitiveTypes.add(typeFullname)
+
     typeFullname
 }

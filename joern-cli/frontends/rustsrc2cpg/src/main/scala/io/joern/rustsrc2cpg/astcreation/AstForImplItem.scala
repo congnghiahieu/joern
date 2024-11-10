@@ -35,18 +35,18 @@ trait AstForImplItem(implicit schemaValidationMode: ValidationMode) { this: AstC
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
     }
-
+    val modifierNode = modifierForVisibility(filename, parentFullname, constImplItemInstance.vis)
     val typeAst = constImplItemInstance.ty match {
       case Some(ty) => astForType(filename, parentFullname, ty)
       case None     => Ast()
     }
-    val genericAst = constImplItemInstance.generics match {
-      case Some(generics) => astForGenerics(filename, parentFullname, generics)
-      case None           => Ast()
-    }
     val exprAst = constImplItemInstance.expr match {
       case Some(expr) => astForExpr(filename, parentFullname, expr)
       case None       => Ast()
+    }
+    val genericAst = constImplItemInstance.generics match {
+      case Some(generics) => astForGenerics(filename, parentFullname, generics)
+      case None           => Ast()
     }
 
     val typeFullName = constImplItemInstance.ty match {
@@ -58,8 +58,8 @@ trait AstForImplItem(implicit schemaValidationMode: ValidationMode) { this: AstC
       case None       => Defines.Unknown
     }
     val localCode = s"const ${constImplItemInstance.ident}: ${typeFullName}"
-
     val fullCode  = s"${localCode} = ${exprCode}"
+
     val constNode = localNode(constImplItemInstance, constImplItemInstance.ident, localCode, typeFullName)
     localNodeMap.put(constImplItemInstance.ident, constNode)
 
@@ -68,27 +68,35 @@ trait AstForImplItem(implicit schemaValidationMode: ValidationMode) { this: AstC
       .withChild(typeAst)
       .withChild(exprAst)
       .withChild(genericAst)
+      .withChild(Ast(modifierNode))
       .withChildren(annotationsAst)
   }
 
   def astForImplItemFn(filename: String, parentFullname: String, fnImplItemInstance: ImplItemFn): Ast = {
+    val newMethodNode = methodNode(fnImplItemInstance, fnImplItemInstance.ident, "", "", filename).isExternal(
+      fnImplItemInstance.stmts.isEmpty
+    )
+
     val annotationsAst = fnImplItemInstance.attrs match {
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
     }
-    val modifierNode = modifierForVisibility(filename, parentFullname, fnImplItemInstance.vis)
-
-    val blockAst = astForBlock(filename, parentFullname, fnImplItemInstance.stmts)
-    val newMethodNode = methodNode(fnImplItemInstance, fnImplItemInstance.ident, "", "", filename).isExternal(
-      fnImplItemInstance.stmts.isEmpty
-    )
-    val parameterIns = fnImplItemInstance.inputs.map(astForFnArg(filename, parentFullname, _)).toList
+    val bodyAst = astForBlock(filename, parentFullname, fnImplItemInstance.stmts)
+    val parameterIns = fnImplItemInstance.inputs.zipWithIndex.map { case (input, index) =>
+      astForFnArg(filename, parentFullname, input, index)
+    }.toList
     val methodRetNode = fnImplItemInstance.output match {
       case Some(output) => {
         val typeFullname = typeFullnameForType(filename, parentFullname, output)
-        methodReturnNode(UnknownAst(), typeFullname).code(typeFullname)
+        val typeAst      = astForType(filename, parentFullname, output)
+
+        Ast(
+          methodReturnNode(UnknownAst(), typeFullname)
+            .code(typeFullname)
+        )
+          .withChild(typeAst)
       }
-      case None => methodReturnNode(UnknownAst(), "")
+      case None => Ast(methodReturnNode(UnknownAst(), ""))
     }
     val variadicAst = fnImplItemInstance.variadic match {
       case Some(variadic) => astForVariadic(filename, parentFullname, variadic)
@@ -99,17 +107,18 @@ trait AstForImplItem(implicit schemaValidationMode: ValidationMode) { this: AstC
       case None           => Ast()
     }
 
-    val methodAst =
-      methodAstWithAnnotations(
-        newMethodNode,
-        parameterIns :+ variadicAst,
-        blockAst,
-        methodRetNode,
-        Seq(modifierNode),
-        annotationsAst
-      ).withChild(genericsAst)
+    val modifierNode = modifierForVisibility(filename, parentFullname, fnImplItemInstance.vis)
 
-    Ast(memberNode(fnImplItemInstance, "", "", ""))
+    val methodAst =
+      Ast(newMethodNode)
+        .withChildren(parameterIns :+ variadicAst)
+        .withChild(bodyAst)
+        .withChild(Ast(modifierNode))
+        .withChild(methodRetNode)
+        .withChildren(annotationsAst)
+        .withChild(genericsAst)
+
+    Ast(memberNode(fnImplItemInstance, fnImplItemInstance.ident, "", ""))
       .withChild(methodAst)
   }
 
@@ -119,7 +128,6 @@ trait AstForImplItem(implicit schemaValidationMode: ValidationMode) { this: AstC
       case None        => List()
     }
     val modifierNode = modifierForVisibility(filename, parentFullname, typeImplItemInstance.vis)
-
     val genericsAst = typeImplItemInstance.generics match {
       case Some(generics) => astForGenerics(filename, parentFullname, generics)
       case None           => Ast()
@@ -131,14 +139,11 @@ trait AstForImplItem(implicit schemaValidationMode: ValidationMode) { this: AstC
 
     val typeFullname = typeImplItemInstance.ty.map(typeFullnameForType(filename, parentFullname, _)).getOrElse("")
     val code         = s"type ${typeImplItemInstance.ident} = ${typeFullname}"
-
-    val newTypeImplItemInstanceNode =
+    val node =
       typeDeclNode(typeImplItemInstance, typeImplItemInstance.ident, typeFullname, filename, code)
 
-    val implItemTypeAst = Ast(newTypeImplItemInstanceNode)
-
-    Ast(memberNode(typeImplItemInstance, "", "", ""))
-      .withChild(implItemTypeAst)
+    Ast(memberNode(typeImplItemInstance, typeImplItemInstance.ident, code, typeFullname))
+      .withChild(Ast(node))
       .withChild(typeAst)
       .withChild(genericsAst)
       .withChild(Ast(modifierNode))

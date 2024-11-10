@@ -45,28 +45,34 @@ trait AstForGenericArgument(implicit schemaValidationMode: ValidationMode) { thi
   }
 
   def astForTypeGenericArgument(filename: String, parentFullname: String, typeInstance: Type): Ast = {
-    val newTypeArgument = NewTypeArgument()
-    val typeAst         = astForType(filename, parentFullname, typeInstance)
-    val code            = typeFullnameForType(filename, parentFullname, typeInstance)
+    // val newTypeArgument = NewTypeArgument()
+    // val typeAst         = astForType(filename, parentFullname, typeInstance)
+    // val code            = typeFullnameForType(filename, parentFullname, typeInstance)
 
-    Ast(unknownNode(UnknownAst(), code))
-      .withChild(Ast(newTypeArgument))
-      .withChild(typeAst)
+    // Ast(unknownNode(UnknownAst(), code))
+    //   .withChild(Ast(newTypeArgument))
+    //   .withChild(typeAst)
+
+    val code            = typeFullnameForType(filename, parentFullname, typeInstance)
+    val newTypeArgument = NewTypeArgument().code(code)
+    Ast(newTypeArgument)
   }
 
   def astForConstGenericArgument(filename: String, parentFullname: String, constInstance: Expr): Ast = {
-    val newTypeArgument = NewTypeArgument()
-    val epxrAst         = astForExpr(filename, parentFullname, constInstance)
-    val code            = codeForExpr(filename, parentFullname, constInstance)
+    // val newTypeArgument = NewTypeArgument()
+    // val epxrAst         = astForExpr(filename, parentFullname, constInstance)
+    // val code            = codeForExpr(filename, parentFullname, constInstance)
 
-    Ast(unknownNode(UnknownAst(), code))
-      .withChild(Ast(newTypeArgument))
-      .withChild(epxrAst)
+    // Ast(unknownNode(UnknownAst(), code))
+    //   .withChild(Ast(newTypeArgument))
+    //   .withChild(epxrAst)
+
+    val code            = codeForExpr(filename, parentFullname, constInstance)
+    val newTypeArgument = NewTypeArgument().code(code)
+    Ast(newTypeArgument)
   }
 
   def astForAssocTypeGenericArgument(filename: String, parentFullname: String, assocTypeInstance: AssocType): Ast = {
-    val name            = assocTypeInstance.ident
-    val newTypeArgument = NewTypeArgument()
     val genericAst = assocTypeInstance.generics match {
       case Some(generics) => astForAngleBracketedGenericArguments(filename, parentFullname, generics)
       case None           => Ast()
@@ -75,8 +81,9 @@ trait AstForGenericArgument(implicit schemaValidationMode: ValidationMode) { thi
       case Some(ty) => astForType(filename, parentFullname, ty)
       case None     => Ast()
     }
-
     val code = codeForAssocTypeGenericArgument(filename, parentFullname, assocTypeInstance)
+    val newTypeArgument = NewTypeArgument()
+      .code(assocTypeInstance.ident)
 
     Ast(unknownNode(assocTypeInstance, code))
       .withChild(Ast(newTypeArgument))
@@ -85,8 +92,6 @@ trait AstForGenericArgument(implicit schemaValidationMode: ValidationMode) { thi
   }
 
   def astForAssocConstGenericArgument(filename: String, parentFullname: String, assocConstInstance: AssocConst): Ast = {
-    val name            = assocConstInstance.ident
-    val newTypeArgument = NewTypeArgument()
     val genericAst = assocConstInstance.generics match {
       case Some(generics) => astForAngleBracketedGenericArguments(filename, parentFullname, generics)
       case None           => Ast()
@@ -96,7 +101,8 @@ trait AstForGenericArgument(implicit schemaValidationMode: ValidationMode) { thi
       case None        => Ast()
     }
 
-    val code = codeForAssocConstGenericArgument(filename, parentFullname, assocConstInstance)
+    val code            = codeForAssocConstGenericArgument(filename, parentFullname, assocConstInstance)
+    val newTypeArgument = NewTypeArgument().code(assocConstInstance.ident)
 
     Ast(unknownNode(assocConstInstance, code))
       .withChild(Ast(newTypeArgument))
@@ -105,15 +111,15 @@ trait AstForGenericArgument(implicit schemaValidationMode: ValidationMode) { thi
   }
 
   def astForConstraintGenericArgument(filename: String, parentFullname: String, constraintInstance: Constraint): Ast = {
-    val name            = constraintInstance.ident
-    val newTypeArgument = NewTypeArgument()
+
     val genericAst = constraintInstance.generics match {
       case Some(generics) => astForAngleBracketedGenericArguments(filename, parentFullname, generics)
       case None           => Ast()
     }
     val boundsAst = constraintInstance.bounds.map(astForTypeParamBound(filename, parentFullname, _)).toList
 
-    val code = codeForConstraintGenericArgument(filename, parentFullname, constraintInstance)
+    val code            = codeForConstraintGenericArgument(filename, parentFullname, constraintInstance)
+    val newTypeArgument = NewTypeArgument().code(constraintInstance.ident)
 
     Ast(unknownNode(constraintInstance, code))
       .withChild(Ast(newTypeArgument))
@@ -202,8 +208,11 @@ trait CodeForGenericArgument(implicit schemaValidationMode: ValidationMode) { th
       case None => code
     }
     code = constraintInstance.bounds.nonEmpty match {
-      case true =>
-        s"$code: ${constraintInstance.bounds.map(codeForTypeParamBound(filename, parentFullname, _)).mkString(" + ")}"
+      case true => {
+        val boundsCode =
+          constraintInstance.bounds.map(codeForTypeParamBound(filename, parentFullname, _)).mkString(" + ")
+        s"$code: $boundsCode"
+      }
       case false => code
     }
     code

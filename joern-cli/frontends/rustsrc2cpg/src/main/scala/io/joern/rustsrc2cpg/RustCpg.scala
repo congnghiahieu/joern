@@ -39,9 +39,9 @@ class RustCpg extends X2CpgFrontend[Config] {
         val astCreationPass = new AstCreationPass(cpg, config, tempOutputDir.path, cargoCrate, report)
         astCreationPass.createAndApply()
 
-        val typeResolverPass =
-          new TypeResolverPass(cpg, astCreationPass.getUsedPrimitiveTypes().toSeq)
-        typeResolverPass.createAndApply()
+        // val typeResolverPass =
+        //   new TypeResolverPass(cpg, astCreationPass.getUsedPrimitiveTypes().toSeq)
+        // typeResolverPass.createAndApply()
 
         val moduleResovelerPass = new CrateResolverPass(cpg, cargoCrate)
         moduleResovelerPass.createAndApply()

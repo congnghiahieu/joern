@@ -33,22 +33,47 @@ trait AstForForeignItem(implicit schemaValidationMode: ValidationMode) {
   }
 
   def astForForeignItemFn(filename: String, parentFullname: String, fnForeignItemInstance: ForeignItemFn): Ast = {
+    val newMethodNode = methodNode(fnForeignItemInstance, fnForeignItemInstance.ident, "", "", filename)
+
     val annotationsAst = fnForeignItemInstance.attrs match {
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
     }
+    val parameterIns = fnForeignItemInstance.inputs.zipWithIndex.map { case (input, index) =>
+      astForFnArg(filename, parentFullname, input, index)
+    }.toList
+
+    val methodRetNode = fnForeignItemInstance.output match {
+      case Some(output) => {
+        val typeFullname = typeFullnameForType(filename, parentFullname, output)
+        val typeAst      = astForType(filename, parentFullname, output)
+
+        Ast(
+          methodReturnNode(UnknownAst(), typeFullname)
+            .code(typeFullname)
+        )
+          .withChild(typeAst)
+      }
+      case None => Ast(methodReturnNode(UnknownAst(), ""))
+    }
+
+    val variadicAst = fnForeignItemInstance.variadic match {
+      case Some(variadic) => astForVariadic(filename, parentFullname, variadic)
+      case _              => Ast()
+    }
+    val genericsAst = fnForeignItemInstance.generics match {
+      case Some(generics) => astForGenerics(filename, parentFullname, generics)
+      case None           => Ast()
+    }
+
     val modifierNode = modifierForVisibility(filename, parentFullname, fnForeignItemInstance.vis)
 
-    val bodyAst       = blockAst(blockNode(fnForeignItemInstance, "{}", ""))
-    val newMethodNode = methodNode(fnForeignItemInstance, fnForeignItemInstance.ident, "", "", filename)
-    val parameterIns  = fnForeignItemInstance.inputs.map(astForFnArg(filename, parentFullname, _)).toList
-    val methodReturnTypeFullname = fnForeignItemInstance.output match {
-      case Some(output) => typeFullnameForType(filename, parentFullname, output)
-      case None         => Defines.Unknown
-    }
-    val methodRetNode = methodReturnNode(fnForeignItemInstance, methodReturnTypeFullname)
-
-    methodAstWithAnnotations(newMethodNode, parameterIns, bodyAst, methodRetNode, Seq(modifierNode), annotationsAst)
+    Ast(newMethodNode)
+      .withChildren(parameterIns :+ variadicAst)
+      .withChild(Ast(modifierNode))
+      .withChild(methodRetNode)
+      .withChildren(annotationsAst)
+      .withChild(genericsAst)
   }
 
   def astForForeignItemStatic(

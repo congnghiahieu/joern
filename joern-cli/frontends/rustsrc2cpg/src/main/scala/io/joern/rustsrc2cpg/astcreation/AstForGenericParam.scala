@@ -35,13 +35,22 @@ trait AstForGenericParam(implicit schemaValidationMode: ValidationMode) { this: 
       case None        => List()
     }
     val lifetimePredicateAst = astForLifetimeAsParam(filename, parentFullname, lifetimeParamInstance.lifetime)
-    val boundsAst            = lifetimeParamInstance.bounds.map(astForLifetime(filename, parentFullname, _))
+
+    val boundsAst = lifetimeParamInstance.bounds.nonEmpty match {
+      case true =>
+        val bounds = lifetimeParamInstance.bounds.map(astForLifetime(filename, parentFullname, _)).toList
+        val boundsCode =
+          lifetimeParamInstance.bounds.map(codeForLifetime(filename, parentFullname, _)).mkString(" + ")
+        val wrapper = Ast(unknownNode(BoundAst(), boundsCode))
+        wrapper.withChildren(bounds)
+      case false => Ast()
+    }
 
     val code = codeForLifetimeGenericParam(filename, parentFullname, lifetimeParamInstance)
 
     Ast(unknownNode(lifetimeParamInstance, code))
       .withChild(lifetimePredicateAst)
-      .withChildren(boundsAst)
+      .withChild(boundsAst)
       .withChildren(annotationsAst)
   }
 
@@ -50,7 +59,15 @@ trait AstForGenericParam(implicit schemaValidationMode: ValidationMode) { this: 
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
     }
-    val boundsAst = typeParamInstance.bounds.map(astForTypeParamBound(filename, parentFullname, _))
+    val boundsAst = typeParamInstance.bounds.nonEmpty match {
+      case true =>
+        val bounds = typeParamInstance.bounds.map(astForTypeParamBound(filename, parentFullname, _)).toList
+        val boundsCode =
+          typeParamInstance.bounds.map(codeForTypeParamBound(filename, parentFullname, _)).mkString(" + ")
+        val wrapper = Ast(unknownNode(BoundAst(), boundsCode))
+        wrapper.withChildren(bounds)
+      case false => Ast()
+    }
     val deafaulAst = typeParamInstance.default match {
       case Some(default) => astForType(filename, parentFullname, default)
       case None          => Ast()
@@ -60,11 +77,11 @@ trait AstForGenericParam(implicit schemaValidationMode: ValidationMode) { this: 
 
     val typeParameterNode = NewTypeParameter()
       .name(typeParamInstance.ident)
-      .code(code)
+      .code(typeParamInstance.ident)
 
     Ast(unknownNode(typeParamInstance, code))
       .withChild(Ast(typeParameterNode))
-      .withChildren(boundsAst)
+      .withChild(boundsAst)
       .withChild(deafaulAst)
       .withChildren(annotationsAst)
   }
@@ -87,7 +104,7 @@ trait AstForGenericParam(implicit schemaValidationMode: ValidationMode) { this: 
 
     val typeParameterNode = NewTypeParameter()
       .name(constParamInstance.ident)
-      .code(code)
+      .code(constParamInstance.ident)
 
     Ast(unknownNode(constParamInstance, code))
       .withChild(Ast(typeParameterNode))

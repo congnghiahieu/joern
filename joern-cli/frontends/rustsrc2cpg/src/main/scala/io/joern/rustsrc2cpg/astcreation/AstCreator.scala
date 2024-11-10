@@ -66,6 +66,7 @@ class AstCreator(
     with CodeForPathArguments
     with AstForRangeLimits
     with AstForStmt
+    with CodeForStmt
     with AstForTokenTree
     with CodeForTokenTree
     with AstForTraitBoundModifier
@@ -84,7 +85,6 @@ class AstCreator(
   protected val objectMapper: ObjectMapper                       = ObjectMapper()
   protected val namespaceStack: Stack[NewNode]                   = Stack.empty
   protected val namespaceMap: HashMap[String, NewNamespaceBlock] = HashMap.empty
-  protected var globalAst: Option[Ast]                           = None
   protected val scope: Scope[String, (NewNode, String), NewNode] = new Scope()
 
   protected val primitiveTypeSet: HashSet[String] = HashSet(
