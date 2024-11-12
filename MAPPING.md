@@ -164,6 +164,8 @@ For example: `unknownNode(UnknownAst(), "")` to `unknownNode(referencePatInstanc
 
 - generate simple examples for all kinds of common Java syntax (generate simple example for each kind of syntax only)
 
+- generate a main function contains 1 conventional if elseif else, 1 conventional for loop, 1 conventional while in js
+
 # Enum
 
 - `AttrStyle` ->
@@ -557,7 +559,35 @@ val METHOD_REF_NODE = "METHOD_REF_NODE"
 - AstForTraitItem
 - AstForWherePredicate
 
-- Thử bỏ wrapper cho Condition, sửa lại condition chấp nhận local node hoặc sửa local node của cond thành CallAst
 - Thử sửa lại path angle bracket để lấy được path ref đúng và generic argument
-- Ref được type argument đến type argument (không khả thi)
+- Ref được type argument đến type parameter (không khả thi)
 - Thử chuyển AstForType sang Type thay vì toàn bộ là TypeRef. Phân biệt rõ TypeDecl, Type
+- Gọi các module cùng file, khác file là chưa làm được. Scope làm được rồi nhưng module thì chưa (hay namespace khác nhau)
+- Xử lý ident đặc biệt như `self`, `super`
+- Sửa lại methodParameterIn thành local node, ref được đến method parameter in
+- Cân nhắc có cần phân biệt METHOD_REF, IDENTIFIER hay không. Chỉ cần để là identifier và sau đó ref đến
+
+# EdgeTypes
+
+import io.shiftleft.codepropertygraph.generated.EdgeTypes
+EdgeTypes.ALIAS_OF
+EdgeTypes.ARGUMENT
+EdgeTypes.AST
+EdgeTypes.BINDS
+EdgeTypes.CALL
+EdgeTypes.CAPTURE
+EdgeTypes.CDG
+EdgeTypes.CFG
+EdgeTypes.CONDITION
+EdgeTypes.CONTAINS
+EdgeTypes.DOMINATE
+EdgeTypes.EVAL_TYPE
+EdgeTypes.IMPORTS
+EdgeTypes.INHERITS_FROM
+EdgeTypes.IS_CALL_FOR_IMPORT
+EdgeTypes.PARAMETER_LINK
+EdgeTypes.POST_DOMINATE
+EdgeTypes.REACHING_DEF
+EdgeTypes.RECEIVER
+EdgeTypes.REF
+EdgeTypes.SOURCE_FILE

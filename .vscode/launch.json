@@ -47,6 +47,50 @@
       ],
       "jvmOptions": [],
       "env": {}
-    }
+    },
+    {
+      "type": "scala",
+      "request": "launch",
+      "name": "jssrc2cpg Object Main Small Example",
+      "mainClass": "io.joern.jssrc2cpg.Main",
+      "args": [
+        "/home/hieucien/Workspace/joern/rust/tests/js"
+      ],
+      "jvmOptions": [],
+      "env": {}
+    },
+    {
+      "type": "scala",
+      "request": "launch",
+      "name": "pysrc2cpg Object Main Small Example",
+      "mainClass": "io.joern.pysrc2cpg.NewMain",
+      "args": [
+        "/home/hieucien/Workspace/joern/rust/tests/python"
+      ],
+      "jvmOptions": [],
+      "env": {}
+    },
+    {
+      "type": "scala",
+      "request": "launch",
+      "name": "javasrc2cpg Object Main Small Example",
+      "mainClass": "io.joern.javasrc2cpg.Main",
+      "args": [
+        "/home/hieucien/Workspace/joern/rust/tests/java"
+      ],
+      "jvmOptions": [],
+      "env": {}
+    },
+    {
+      "type": "scala",
+      "request": "launch",
+      "name": "c2cpg Object Main Small Example",
+      "mainClass": "io.joern.c2cpg.Main",
+      "args": [
+        "/home/hieucien/Workspace/joern/rust/tests/c"
+      ],
+      "jvmOptions": [],
+      "env": {}
+    },
   ]
 }

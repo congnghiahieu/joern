@@ -5,35 +5,39 @@ SCRIPT_ABS_DIR=$(dirname $SCRIPT_ABS_PATH)
 ROOT_DIR=$(dirname $(dirname $SCRIPT_ABS_DIR))
 # OUTPUT_DIR=out_$(date +%s)
 OUTPUT_DIR=$ROOT_DIR/out
+CPG_PATH=$ROOT_DIR/cpg.bin
 DATABASE="neo4j"
 DATABASE_USER="neo4j"
 DATABASE_PASSWORD="12345678"
 
 case $1 in
 "rust")
-  CPG_PATH=$ROOT_DIR/joern-cli/frontends/rustsrc2cpg/cpg.bin
+  INPUT_DIR=$ROOT_DIR/rust/tests/rust/
   ;;
 "go")
-  CPG_PATH=$ROOT_DIR/joern-cli/frontends/gosrc2cpg/cpg.bin
+  INPUT_DIR=$ROOT_DIR/rust/tests/go/
   ;;
 "js")
-  CPG_PATH=$ROOT_DIR/joern-cli/frontends/jssrc2cpg/cpg.bin
+  INPUT_DIR=$ROOT_DIR/rust/tests/js/
   ;;
 "py")
-  CPG_PATH=$ROOT_DIR/joern-cli/frontends/pysrc2cpg/cpg.bin
+  INPUT_DIR=$ROOT_DIR/rust/tests/python/
   ;;
 "java")
-  CPG_PATH=$ROOT_DIR/joern-cli/frontends/javasrc2cpg/cpg.bin
+  INPUT_DIR=$ROOT_DIR/rust/tests/java/
   ;;
 "c")
-  CPG_PATH=$ROOT_DIR/joern-cli/frontends/c2cpg/cpg.bin
+  INPUT_DIR=$ROOT_DIR/rust/tests/c/
   ;;
 *)
-  CPG_PATH=$ROOT_DIR/joern-cli/frontends/rustsrc2cpg/cpg.bin
+  INPUT_DIR=$ROOT_DIR/rust/tests/rust/
   ;;
 esac
 
 rm -rf $OUTPUT_DIR
+
+$ROOT_DIR/joern-parse --output $CPG_PATH $INPUT_DIR
+
 $ROOT_DIR/joern-export --repr=all --format=neo4jcsv --out=$OUTPUT_DIR $CPG_PATH
 
 # Remove old import file

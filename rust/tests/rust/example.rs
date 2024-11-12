@@ -1,33 +1,28 @@
-// https://doc.rust-lang.org/reference/items/implementations.html#inherent-implementations
+// fn main() {
+//     let number = 10;
 
-pub mod color {
-    pub struct Color(pub u8, pub u8, pub u8);
+//     // Conventional if-elseif-else
+//     if number < 5 {
+//         println!("The number is less than 5");
+//     } else if number == 5 {
+//         println!("The number is equal to 5");
+//     } else {
+//         println!("The number is greater than 5");
+//     }
 
-    impl Color {
-        pub const WHITE: Color = Color(255, 255, 255);
-    }
-}
+//     // Conventional for loop
+//     for i in 0..5 {
+//         let a = i + 10;
+//         let b = a + 20;
+//     }
 
-mod values {
-    use super::color::Color;
-    impl Color {
-        pub fn red() -> Color {
-            Color(255, 0, 0)
-        }
-    }
-}
+//     // Conventional while loop
+//     let mut count = 0;
+//     while count < 5 {
+//         let a = count + 10;
+//         let b = a + 20;
 
-pub use self::color::Color;
-fn main() {
-    // Actual path to the implementing type and impl in the same module.
-    color::Color::WHITE;
-
-    // Impl blocks in different modules are still accessed through a path to the type.
-    color::Color::red();
-
-    // Re-exported paths to the implementing type also work.
-    Color::red();
-
-    // Does not work, because use in `values` is not pub.
-    // values::Color::red();
-}
+//         count += 1;
+//     }
+// }
+fn main() {}
