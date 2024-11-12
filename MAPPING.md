@@ -563,9 +563,11 @@ val METHOD_REF_NODE = "METHOD_REF_NODE"
 - Ref được type argument đến type parameter (không khả thi)
 - Thử chuyển AstForType sang Type thay vì toàn bộ là TypeRef. Phân biệt rõ TypeDecl, Type
 - Gọi các module cùng file, khác file là chưa làm được. Scope làm được rồi nhưng module thì chưa (hay namespace khác nhau)
-- Xử lý ident đặc biệt như `self`, `super`
+- Xử lý ident đặc biệt như `self`, `super`, `Self`
 - Sửa lại methodParameterIn thành local node, ref được đến method parameter in
 - Cân nhắc có cần phân biệt METHOD_REF, IDENTIFIER hay không. Chỉ cần để là identifier và sau đó ref đến
+- Sửa lại `ItemType` có cạnh là alias of hoặc set alias name = ...
+- Kiểm tra lại mấy node `localNode()`
 
 # EdgeTypes
 

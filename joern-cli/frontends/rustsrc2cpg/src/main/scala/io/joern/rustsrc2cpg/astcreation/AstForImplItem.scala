@@ -132,9 +132,10 @@ trait AstForImplItem(implicit schemaValidationMode: ValidationMode) { this: AstC
       case Some(ty) => typeFullnameForType(filename, parentFullname, ty)
       case None     => Defines.Unknown
     }
-    val code = s"type ${typeImplItemInstance.ident} = ${typeFullname}"
+    var code = s"type ${typeImplItemInstance.ident} = ${typeFullname}"
+    if (modifierNode.modifierType == ModifierTypes.PUBLIC) { code = s"pub ${code}" }
     val node =
-      typeDeclNode(typeImplItemInstance, typeImplItemInstance.ident, typeFullname, filename, code)
+      typeDeclNode(typeImplItemInstance, typeImplItemInstance.ident, typeImplItemInstance.ident, filename, code)
     scope.addToScope(typeImplItemInstance.ident, (node, code))
 
     scope.pushNewScope(node)
@@ -167,9 +168,11 @@ trait AstForImplItem(implicit schemaValidationMode: ValidationMode) { this: AstC
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
     }
+
     val marcoInstance =
       Macro(macroImplItemInstance.path, macroImplItemInstance.delimiter, macroImplItemInstance.tokens)
-    val macroAst = astForMacro(filename, parentFullname, marcoInstance).withChildren(annotationsAst)
+    val macroAst = astForMacro(filename, parentFullname, marcoInstance, macroImplItemInstance.semi_token)
+      .withChildren(annotationsAst)
 
     Ast(memberNode(macroImplItemInstance, "", "", ""))
       .withChild(macroAst)

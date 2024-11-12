@@ -14,8 +14,14 @@ import io.shiftleft.codepropertygraph.generated.nodes.*
 import scala.collection.mutable.ListBuffer
 
 trait AstForMacro(implicit schemaValidationMode: ValidationMode) { this: AstCreator =>
-  def astForMacro(filename: String, parentFullname: String, macroInstance: Macro): Ast = {
-    val (methodFullName, input, code) = codeForMacro(filename, parentFullname, macroInstance)
+  def astForMacro(
+    filename: String,
+    parentFullname: String,
+    macroInstance: Macro,
+    semiToken: Option[Boolean] = None,
+    ident: Option[Ident] = None
+  ): Ast = {
+    val (methodFullName, input, code) = codeForMacro(filename, parentFullname, macroInstance, semiToken, ident)
 
     val argAst = macroInstance.tokens match {
       case Some(tokens) => astForTokenStream(filename, parentFullname, tokens)
@@ -30,13 +36,19 @@ trait AstForMacro(implicit schemaValidationMode: ValidationMode) { this: AstCrea
     // Macro function is built in or some time imported but can not specify
 
     val callExprNode =
-      callNode(macroInstance, code, methodFullName, methodFullName, DispatchTypes.INLINED, None, None)
+      callNode(macroInstance, code, methodFullName, methodFullName, DispatchTypes.INLINED)
     callAst(callExprNode, Seq(argAst))
       .withChild(pathAst)
   }
 
-  def codeForMacro(filename: String, parentFullname: String, macroInstance: Macro): (String, String, String) = {
-    val methodFullName = macroInstance.path match {
+  def codeForMacro(
+    filename: String,
+    parentFullname: String,
+    macroInstance: Macro,
+    semiToken: Option[Boolean] = None,
+    ident: Option[Ident] = None
+  ): (String, String, String) = {
+    val methodFullname = macroInstance.path match {
       case Some(path) => s"${typeFullnameForPath(filename, parentFullname, path)}!"
       case None       => Defines.Unknown
     }
@@ -44,19 +56,26 @@ trait AstForMacro(implicit schemaValidationMode: ValidationMode) { this: AstCrea
       case Some(tokens) => codeForTokenStream(filename, parentFullname, tokens)
       case None         => Defines.Unknown
     }
-    val code = macroInstance.delimiter match {
+    val delimeterCode = macroInstance.delimiter match {
       case Some(delimiter) => {
         delimiter match {
-          case MacroDelimiter.Brace   => s"$methodFullName{$input}"
-          case MacroDelimiter.Paren   => s"$methodFullName($input)"
-          case MacroDelimiter.Bracket => s"$methodFullName[$input]"
+          case MacroDelimiter.Brace   => s"{$input}"
+          case MacroDelimiter.Paren   => s"($input)"
+          case MacroDelimiter.Bracket => s"[$input]"
         }
       }
-      case None => {
-        s"$methodFullName $input"
-      }
+      case None => s" $input"
     }
 
-    (methodFullName, input, code)
+    var code = ident match {
+      case Some(ident) => s"$methodFullname $ident $delimeterCode"
+      case None        => s"$methodFullname$delimeterCode"
+    }
+    code = semiToken match {
+      case Some(true) => s"$code;"
+      case _          => code
+    }
+
+    (methodFullname, input, code)
   }
 }

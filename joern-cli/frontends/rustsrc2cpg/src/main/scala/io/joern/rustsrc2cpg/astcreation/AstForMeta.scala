@@ -19,6 +19,7 @@ type CodeForReturnType = (String, String, String)
 trait AstForMeta(implicit schemaValidationMode: ValidationMode) { this: AstCreator =>
   def astForMeta(filename: String, parentFullname: String, metaInstance: Meta): Ast = {
     if (metaInstance.path.isDefined) {
+      setCurrentPathCpgNodeType(PathCPGNodeType.METHODREF_NODE)
       astForPath(filename, parentFullname, metaInstance.path.get)
     } else if (metaInstance.list.isDefined) {
       astForMetaList(filename, parentFullname, metaInstance.list.get)
@@ -30,6 +31,7 @@ trait AstForMeta(implicit schemaValidationMode: ValidationMode) { this: AstCreat
   }
   def astForPath(filename: String, parentFullname: String, pathInstance: Path, qself: Option[QSelf] = None): Ast = {
     val (fullname, _, code) = codeForPath(filename, parentFullname, pathInstance, qself)
+
     getCurrentPathCpgNodeType match {
       case PathCPGNodeType.IDENTIFIER_NODE => {
         val node = identifierNode(pathInstance, fullname, fullname, "")
@@ -51,7 +53,9 @@ trait AstForMeta(implicit schemaValidationMode: ValidationMode) { this: AstCreat
             newNode match {
               case typeNode: NewType         => Ast(node).withRefEdge(node, typeNode)
               case typeDeclNode: NewTypeDecl => Ast(node).withRefEdge(node, typeDeclNode)
-              case _                         => Ast(node)
+              case typeParamNode: NewTypeParameter =>
+                Ast(node).withRefEdge(node, typeParamNode)
+              case _ => Ast(node)
             }
           }
           case None => Ast(node)
@@ -119,8 +123,8 @@ trait CodeForMeta(implicit schemaValidationMode: ValidationMode) { this: AstCrea
     qself: Option[QSelf] = None
   ): CodeForReturnType = {
     val typeFullname = typeFullnameForPath(filename, parentFullname, pathInstance, qself)
-    val input        = typeFullname // temporary
-    val code         = typeFullname // temporary
+    val input        = typeFullname // NOTE: temporary
+    val code         = typeFullname // NOTE: temporary
     (typeFullname, input, code)
   }
 

@@ -44,14 +44,6 @@ trait AstForWherePredicate(implicit schemaValidationMode: ValidationMode) { this
     val lifetimePredicateNode = NewLifetimeParameter()
       .name(lifetimeCode)
       .code(lifetimeCode)
-    val boundsAst = lifetimeWherePredicateInstance.bounds.nonEmpty match {
-      case true =>
-        val bounds  = lifetimeWherePredicateInstance.bounds.map(astForLifetime(filename, parentFullname, _)).toList
-        val wrapper = Ast(unknownNode(BoundAst(), boundsCode))
-        wrapper.withChildren(bounds)
-      case false => Ast()
-    }
-
     val code = lifetimeWherePredicateInstance.bounds.nonEmpty match {
       case true  => s"$lifetimeCode: $boundsCode"
       case false => lifetimeCode
@@ -65,6 +57,14 @@ trait AstForWherePredicate(implicit schemaValidationMode: ValidationMode) { this
         }
       }
       case _ => Ast(lifetimePredicateNode)
+    }
+
+    val boundsAst = lifetimeWherePredicateInstance.bounds.nonEmpty match {
+      case true =>
+        val bounds  = lifetimeWherePredicateInstance.bounds.map(astForLifetime(filename, parentFullname, _)).toList
+        val wrapper = Ast(unknownNode(BoundAst(), boundsCode))
+        wrapper.withChildren(bounds)
+      case false => Ast()
     }
 
     Ast(unknownNode(lifetimeWherePredicateInstance, code))
@@ -128,11 +128,22 @@ trait AstForWherePredicate(implicit schemaValidationMode: ValidationMode) { this
   }
 
   def astForLifetime(filename: String, parentFullname: String, lifetimeInstance: Lifetime): Ast = {
-    val code = codeForLifetime(filename, parentFullname, lifetimeInstance)
+    val lifetimeName = codeForLifetime(filename, parentFullname, lifetimeInstance)
     val node = NewLifetime()
-      .name(code)
+      .name(lifetimeName)
 
-    Ast(node)
+    val ast = scope.lookupVariable(lifetimeName) match {
+      case Some(newNode, _) => {
+        newNode match {
+          case lifetimeParameterNode: NewLifetimeParameter =>
+            Ast(node).withRefEdge(node, lifetimeParameterNode)
+          case _ => Ast(node)
+        }
+      }
+      case _ => Ast(node)
+    }
+
+    ast
   }
 
   def codeForLifetime(filename: String, parentFullname: String, lifetimeInstance: Lifetime): String = {

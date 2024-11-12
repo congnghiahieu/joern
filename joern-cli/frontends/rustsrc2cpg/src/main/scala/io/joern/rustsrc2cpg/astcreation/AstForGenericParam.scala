@@ -33,25 +33,23 @@ trait AstForGenericParam(implicit schemaValidationMode: ValidationMode) { this: 
     val lifetimeCode = codeForLifetime(filename, parentFullname, lifetimeParamInstance.lifetime)
     val boundsCode   = lifetimeParamInstance.bounds.map(codeForLifetime(filename, parentFullname, _)).mkString(" + ")
 
+    val lifetimeParamNode = NewLifetimeParameter()
+      .name(lifetimeCode)
+      .code(lifetimeCode)
+    val code = codeForLifetimeGenericParam(filename, parentFullname, lifetimeParamInstance)
+    scope.addToScope(code, (lifetimeParamNode, code))
+
     val annotationsAst = lifetimeParamInstance.attrs match {
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
     }
-
-    val lifetimeParamNode = NewLifetimeParameter()
-      .name(lifetimeCode)
-      .code(lifetimeCode)
     val boundsAst = lifetimeParamInstance.bounds.nonEmpty match {
       case true =>
-        val bounds = lifetimeParamInstance.bounds.map(astForLifetime(filename, parentFullname, _)).toList
-
+        val bounds  = lifetimeParamInstance.bounds.map(astForLifetime(filename, parentFullname, _)).toList
         val wrapper = Ast(unknownNode(BoundAst(), boundsCode))
         wrapper.withChildren(bounds)
       case false => Ast()
     }
-
-    val code = codeForLifetimeGenericParam(filename, parentFullname, lifetimeParamInstance)
-    scope.addToScope(code, (lifetimeParamNode, code))
 
     Ast(unknownNode(lifetimeParamInstance, code))
       .withChild(Ast(lifetimeParamNode))

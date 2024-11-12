@@ -1,28 +1,20 @@
-// fn main() {
-//     let number = 10;
+// https://doc.rust-lang.org/reference/patterns.html#slice-patterns
 
-//     // Conventional if-elseif-else
-//     if number < 5 {
-//         println!("The number is less than 5");
-//     } else if number == 5 {
-//         println!("The number is equal to 5");
-//     } else {
-//         println!("The number is greater than 5");
-//     }
+fn fixed() {
+    // Fixed size
+    let arr = [1, 2, 3];
+    match arr {
+        [1, _, _] => "starts with one",
+        [a, b, c] => "starts with something else",
+    };
+}
 
-//     // Conventional for loop
-//     for i in 0..5 {
-//         let a = i + 10;
-//         let b = a + 20;
-//     }
-
-//     // Conventional while loop
-//     let mut count = 0;
-//     while count < 5 {
-//         let a = count + 10;
-//         let b = a + 20;
-
-//         count += 1;
-//     }
-// }
-fn main() {}
+fn dynamic() {
+    // Dynamic size
+    let v = vec![1, 2, 3];
+    match v[..] {
+        [a, b] => { /* this arm will not apply because the length doesn't match */ }
+        [a, b, c] => { /* this arm will apply */ }
+        _ => { /* this wildcard is required, since the length is not known statically */ }
+    };
+}

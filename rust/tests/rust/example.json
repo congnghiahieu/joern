@@ -2,60 +2,6 @@
   "items": [
     {
       "fn": {
-        "ident": "outer",
-        "inputs": [],
-        "output": null,
-        "stmts": [
-          {
-            "let": {
-              "pat": {
-                "ident": {
-                  "ident": "outer_var"
-                }
-              },
-              "init": {
-                "expr": {
-                  "lit": {
-                    "bool": true
-                  }
-                }
-              }
-            }
-          },
-          {
-            "item": {
-              "fn": {
-                "ident": "inner",
-                "inputs": [],
-                "output": null,
-                "stmts": []
-              }
-            }
-          },
-          {
-            "expr": [
-              {
-                "call": {
-                  "func": {
-                    "path": {
-                      "segments": [
-                        {
-                          "ident": "inner"
-                        }
-                      ]
-                    }
-                  },
-                  "args": []
-                }
-              },
-              true
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "fn": {
         "ident": "main",
         "inputs": [],
         "output": null,
@@ -63,214 +9,82 @@
           {
             "let": {
               "pat": {
-                "tuple": {
-                  "elems": [
-                    {
-                      "ident": {
-                        "mut": true,
-                        "ident": "v"
-                      }
-                    },
-                    {
-                      "ident": {
-                        "ident": "w"
-                      }
-                    }
-                  ]
+                "ident": {
+                  "ident": "int_reference"
                 }
               },
               "init": {
                 "expr": {
-                  "tuple": {
-                    "elems": [
-                      {
-                        "macro": {
-                          "path": {
-                            "segments": [
-                              {
-                                "ident": "vec"
-                              }
-                            ]
-                          },
-                          "delimiter": "bracket",
-                          "tokens": [
-                            {
-                              "lit": "1"
-                            },
-                            {
-                              "punct": {
-                                "op": ",",
-                                "spacing": "alone"
-                              }
-                            },
-                            {
-                              "lit": "2"
-                            },
-                            {
-                              "punct": {
-                                "op": ",",
-                                "spacing": "alone"
-                              }
-                            },
-                            {
-                              "lit": "3"
-                            }
-                          ]
-                        }
-                      },
-                      {
-                        "lit": {
-                          "int": "42"
-                        }
+                  "reference": {
+                    "expr": {
+                      "lit": {
+                        "int": "3"
                       }
-                    ]
+                    }
                   }
                 }
               }
             }
           },
           {
-            "let": {
-              "pat": {
-                "tuple_struct": {
-                  "path": {
-                    "segments": [
-                      {
-                        "ident": "Some"
-                      }
-                    ]
+            "expr": [
+              {
+                "match": {
+                  "expr": {
+                    "path": {
+                      "segments": [
+                        {
+                          "ident": "int_reference"
+                        }
+                      ]
+                    }
                   },
-                  "elems": [
+                  "arms": [
                     {
-                      "ident": {
-                        "ident": "t"
-                      }
-                    }
-                  ]
-                }
-              },
-              "init": {
-                "expr": {
-                  "method_call": {
-                    "receiver": {
-                      "path": {
-                        "segments": [
-                          {
-                            "ident": "v"
-                          }
-                        ]
-                      }
-                    },
-                    "method": "pop",
-                    "args": []
-                  }
-                },
-                "diverge": {
-                  "block": {
-                    "stmts": [
-                      {
-                        "macro": {
-                          "path": {
-                            "segments": [
-                              {
-                                "ident": "panic"
-                              }
-                            ]
-                          },
-                          "delimiter": "paren",
-                          "tokens": [],
-                          "semi_token": true
-                        }
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          },
-          {
-            "let": {
-              "pat": {
-                "slice": {
-                  "elems": [
-                    {
-                      "ident": {
-                        "ident": "u"
-                      }
-                    },
-                    {
-                      "ident": {
-                        "ident": "v"
-                      }
-                    }
-                  ]
-                }
-              },
-              "init": {
-                "expr": {
-                  "array": {
-                    "elems": [
-                      {
-                        "index": {
-                          "expr": {
-                            "path": {
-                              "segments": [
-                                {
-                                  "ident": "v"
+                      "pat": {
+                        "reference": {
+                          "pat": {
+                            "paren": {
+                              "pat": {
+                                "range": {
+                                  "start": {
+                                    "lit": {
+                                      "int": "0"
+                                    }
+                                  },
+                                  "limits": "..=",
+                                  "end": {
+                                    "lit": {
+                                      "int": "5"
+                                    }
+                                  }
                                 }
-                              ]
-                            }
-                          },
-                          "index": {
-                            "lit": {
-                              "int": "0"
+                              }
                             }
                           }
                         }
                       },
-                      {
-                        "index": {
-                          "expr": {
-                            "path": {
-                              "segments": [
-                                {
-                                  "ident": "v"
-                                }
-                              ]
-                            }
-                          },
-                          "index": {
-                            "lit": {
-                              "int": "1"
-                            }
-                          }
+                      "body": {
+                        "tuple": {
+                          "elems": []
                         }
                       }
-                    ]
-                  }
-                },
-                "diverge": {
-                  "block": {
-                    "stmts": [
-                      {
-                        "macro": {
-                          "path": {
-                            "segments": [
-                              {
-                                "ident": "panic"
-                              }
-                            ]
-                          },
-                          "delimiter": "paren",
-                          "tokens": [],
-                          "semi_token": true
+                    },
+                    {
+                      "pat": {
+                        "_": {}
+                      },
+                      "body": {
+                        "tuple": {
+                          "elems": []
                         }
                       }
-                    ]
-                  }
+                    }
+                  ]
                 }
-              }
-            }
+              },
+              false
+            ]
           }
         ]
       }

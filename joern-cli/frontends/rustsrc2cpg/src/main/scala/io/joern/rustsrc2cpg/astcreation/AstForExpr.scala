@@ -829,7 +829,8 @@ trait AstForExpr(implicit schemaValidationMode: ValidationMode) { this: AstCreat
   }
 
   def astForExprStruct(filename: String, parentFullname: String, structExprInstance: ExprStruct): Ast = {
-    val exprStructAst = unknownNode(structExprInstance, "")
+    val code          = codeForExprStruct(filename, parentFullname, structExprInstance)
+    val exprStructAst = unknownNode(structExprInstance, code)
 
     scope.pushNewScope(exprStructAst)
 
@@ -1259,7 +1260,7 @@ trait CodeForExpr(implicit schemaValidationMode: ValidationMode) { this: AstCrea
   }
   def codeForExprPath(filename: String, parentFullname: String, pathExprInstance: ExprPath): String = {
     val path         = Path(pathExprInstance.segments, pathExprInstance.leading_colon)
-    val typeFullname = typeFullnameForPath(filename, parentFullname, path)
+    val typeFullname = typeFullnameForPath(filename, parentFullname, path, pathExprInstance.qself)
     typeFullname
   }
   def codeForExprRange(filename: String, parentFullname: String, rangeExprInstance: ExprRange): String = {
@@ -1301,14 +1302,21 @@ trait CodeForExpr(implicit schemaValidationMode: ValidationMode) { this: AstCrea
 
   }
   def codeForExprReturn(filename: String, parentFullname: String, returnExprInstance: ExprReturn): String = {
-    val exprReturnCode = returnExprInstance.expr match {
-      case Some(expr) => codeForExpr(filename, parentFullname, expr)
-      case None       => Defines.Unknown
+    returnExprInstance.expr match {
+      case Some(expr) =>
+        s"return ${codeForExpr(filename, parentFullname, expr)};"
+      case None => ""
     }
-    s"return $exprReturnCode"
   }
   def codeForExprStruct(filename: String, parentFullname: String, structExprInstance: ExprStruct): String = {
-    "StructExpr"
+    val typeFullname = structExprInstance.path match {
+      case Some(path) => typeFullnameForPath(filename, parentFullname, path, structExprInstance.qself)
+      case None       => Defines.Unknown
+    }
+    val fieldsCode =
+      s"{ ${structExprInstance.fields.map(codeForFieldValue(filename, parentFullname, _)).mkString(", ")} }"
+
+    s"$typeFullname $fieldsCode"
   }
   def codeForExprTry(filename: String, parentFullname: String, tryExprInstance: ExprTry): String = {
     "?"

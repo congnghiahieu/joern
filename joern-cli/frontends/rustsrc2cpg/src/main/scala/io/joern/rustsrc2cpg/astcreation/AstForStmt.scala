@@ -47,7 +47,7 @@ trait AstForStmt(implicit schemaValidationMode: ValidationMode) { this: AstCreat
     }
 
     val macroRustAst = Macro(macroStmtInstance.path, macroStmtInstance.delimiter, macroStmtInstance.tokens)
-    astForMacro(filename, parentFullname, macroRustAst).withChildren(annotationsAst)
+    astForMacro(filename, parentFullname, macroRustAst, macroStmtInstance.semi_token).withChildren(annotationsAst)
   }
 
   def astForLocal(filename: String, parentFullname: String, localInstance: Local): Ast = {
@@ -82,10 +82,13 @@ trait AstForStmt(implicit schemaValidationMode: ValidationMode) { this: AstCreat
   }
 
   def astForLocalInit(filename: String, parentFullname: String, localInitInstance: LocalInit): Ast = {
+    setCurrentPathCpgNodeType(PathCPGNodeType.IDENTIFIER_NODE)
     val exprAst = localInitInstance.expr match {
       case Some(expr) => astForExpr(filename, parentFullname, expr)
       case None       => Ast()
     }
+
+    setCurrentPathCpgNodeType(PathCPGNodeType.IDENTIFIER_NODE)
     val divergeAst = localInitInstance.diverge match {
       case Some(diverge) => {
         val divergeExpr = astForExpr(filename, parentFullname, diverge)
@@ -128,7 +131,8 @@ trait CodeForStmt(implicit schemaValidationMode: ValidationMode) { this: AstCrea
     codeForMacro(
       filename,
       parentFullname,
-      Macro(macroStmtInstance.path, macroStmtInstance.delimiter, macroStmtInstance.tokens)
+      Macro(macroStmtInstance.path, macroStmtInstance.delimiter, macroStmtInstance.tokens),
+      macroStmtInstance.semi_token
     )._2
   }
 

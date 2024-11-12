@@ -175,7 +175,8 @@ trait AstForTraitItem(implicit schemaValidationMode: ValidationMode) { this: Ast
 
     val macroInstance =
       Macro(traitItemMacro.path, traitItemMacro.delimiter, traitItemMacro.tokens)
-    val macroAst = astForMacro(filename, parentFullname, macroInstance).withChildren(annotationsAst)
+    val macroAst =
+      astForMacro(filename, parentFullname, macroInstance, traitItemMacro.semi_token).withChildren(annotationsAst)
 
     Ast(memberNode(traitItemMacro, "", "", ""))
       .withChild(macroAst)

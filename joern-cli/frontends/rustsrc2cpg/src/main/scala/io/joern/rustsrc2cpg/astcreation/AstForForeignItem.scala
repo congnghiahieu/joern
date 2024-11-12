@@ -88,6 +88,10 @@ trait AstForForeignItem(implicit schemaValidationMode: ValidationMode) {
       case None        => List()
     }
     val modifierNode = modifierForVisibility(filename, parentFullname, staticForeignItemInstance.vis)
+    val typeAst = staticForeignItemInstance.ty match {
+      case Some(ty) => astForType(filename, parentFullname, ty)
+      case None     => Ast()
+    }
 
     val typeFullname = staticForeignItemInstance.ty match {
       case Some(ty) => typeFullnameForType(filename, parentFullname, ty)
@@ -104,12 +108,23 @@ trait AstForForeignItem(implicit schemaValidationMode: ValidationMode) {
     Ast(unknownNode(staticForeignItemInstance, ""))
       .withChild(Ast(staticNode))
       .withChild(Ast(modifierNode))
+      .withChild(typeAst)
       .withChildren(annotationsAst)
   }
 
   def astForForeignItemType(filename: String, parentFullname: String, typeForeignItemInstance: ForeignItemType): Ast = {
+    val modifierNode = modifierForVisibility(filename, parentFullname, typeForeignItemInstance.vis)
+
+    var code = s"type ${typeForeignItemInstance.ident}"
+    if (modifierNode.modifierType == ModifierTypes.PUBLIC) { code = s"pub ${code}" }
     val newItemTypeNode =
-      typeDeclNode(typeForeignItemInstance, typeForeignItemInstance.ident, "", filename, "")
+      typeDeclNode(
+        typeForeignItemInstance,
+        typeForeignItemInstance.ident,
+        typeForeignItemInstance.ident,
+        filename,
+        code
+      )
     scope.addToScope(typeForeignItemInstance.ident, (newItemTypeNode, typeForeignItemInstance.ident))
 
     scope.pushNewScope(newItemTypeNode)
@@ -118,7 +133,7 @@ trait AstForForeignItem(implicit schemaValidationMode: ValidationMode) {
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
     }
-    val modifierNode = modifierForVisibility(filename, parentFullname, typeForeignItemInstance.vis)
+
     val genericsAst =
       typeForeignItemInstance.generics match {
         case Some(generics) => astForGenerics(filename, parentFullname, generics)
@@ -129,6 +144,7 @@ trait AstForForeignItem(implicit schemaValidationMode: ValidationMode) {
 
     Ast(newItemTypeNode)
       .withChild(genericsAst)
+      .withChild(Ast(modifierNode))
       .withChildren(annotationsAst)
   }
 
@@ -144,7 +160,7 @@ trait AstForForeignItem(implicit schemaValidationMode: ValidationMode) {
 
     val macroRustAst =
       Macro(macroForeignItemInstance.path, macroForeignItemInstance.delimiter, macroForeignItemInstance.tokens)
-    astForMacro(filename, parentFullname, macroRustAst)
+    astForMacro(filename, parentFullname, macroRustAst, macroForeignItemInstance.semi_token)
       .withChildren(annotationsAst)
   }
 }

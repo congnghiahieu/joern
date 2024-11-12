@@ -26,6 +26,7 @@ trait AstForArm(implicit schemaValidationMode: ValidationMode) { this: AstCreato
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
     }
+
     setCurrentPathCpgNodeType(PathCPGNodeType.TYPEREF_NODE)
     val patAst = arm.pat match {
       case Some(pat) => astForPat(filename, armNode.parserTypeName, pat)
@@ -36,7 +37,17 @@ trait AstForArm(implicit schemaValidationMode: ValidationMode) { this: AstCreato
       case Some(guard) => astForExpr(filename, armNode.parserTypeName, guard)
       case None        => Ast()
     }
-    val conditionAst = Ast(unknownNode(WrapperAst(), "")).withChildren(List(patAst, guardAst))
+    var condCode = arm.pat match {
+      case Some(pat) => codeForPat(filename, armNode.parserTypeName, pat)
+      case None      => ""
+    }
+    condCode = arm.guard match {
+      case Some(guard) => s"$condCode @ ${codeForExpr(filename, armNode.parserTypeName, guard)}"
+      case None        => ""
+    }
+    val conditionAst = Ast(unknownNode(WrapperAst(), condCode))
+      .withChildren(List(patAst, guardAst))
+
     val bodyAst = arm.body match {
       case Some(body) => astForExpr(filename, armNode.parserTypeName, body)
       case None       => Ast()

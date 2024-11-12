@@ -18,9 +18,12 @@ import scala.collection.mutable.ListBuffer
 trait AstForTokenTree(implicit schemaValidationMode: ValidationMode) { this: AstCreator =>
   def astForTokenStream(filename: String, parentFullname: String, tokenStream: TokenStream): Ast = {
     val code         = codeForTokenStream(filename, parentFullname, tokenStream)
-    val typeFullname = codeForTokenStream(filename, parentFullname, tokenStream)
-    val node         = literalNode(UnknownAst(), code, typeFullname)
-    Ast(node)
+    val typeFullname = codeForTokenStream(filename, parentFullname, tokenStream) // NOTE: temporary
+
+    code.isEmpty match {
+      case true  => return Ast()
+      case false => Ast(literalNode(UnknownAst(), code, typeFullname))
+    }
   }
 
   def astForTokenTree(filename: String, parentFullname: String, tokenTreeInstance: TokenTree): Ast = {

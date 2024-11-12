@@ -100,8 +100,9 @@ trait AstForPat(implicit schemaValidationMode: ValidationMode) { this: AstCreato
       case Some(pat) => astForPat(filename, parentFullname, pat)
       case None      => Ast()
     }
+    val code = codeForPatParen(filename, parentFullname, parenPatInstance)
 
-    Ast(unknownNode(parenPatInstance, ""))
+    Ast(unknownNode(parenPatInstance, code))
       .withChild(patAst)
       .withChildren(annotationsAst)
   }
@@ -312,7 +313,10 @@ trait CodeForPat(implicit schemaValidationMode: ValidationMode) { this: AstCreat
     orPatInstance.cases.map(codeForPat(filename, parentFullname, _)).mkString(" | ")
   }
   def codeForPatParen(filename: String, parentFullname: String, parenPatInstance: PatParen): String = {
-    "Paren Pattern"
+    parenPatInstance.pat match {
+      case Some(pat) => s"(${codeForPat(filename, parentFullname, pat)})"
+      case None      => "()"
+    }
   }
 
   def codeForPatReference(filename: String, parentFullname: String, referencePatInstance: PatReference): String = {
@@ -329,7 +333,7 @@ trait CodeForPat(implicit schemaValidationMode: ValidationMode) { this: AstCreat
   }
   def codeForPatStruct(filename: String, parentFullname: String, structPatInstance: PatStruct): String = {
     val typeFullname = structPatInstance.path match {
-      case Some(path) => typeFullnameForPath(filename, parentFullname, path)
+      case Some(path) => typeFullnameForPath(filename, parentFullname, path, structPatInstance.qself)
       case None       => Defines.Unknown
     }
     val fieldsCode = s"${structPatInstance.fields.map(codeForFieldPat(filename, parentFullname, _)).mkString(", ")}"
@@ -345,7 +349,7 @@ trait CodeForPat(implicit schemaValidationMode: ValidationMode) { this: AstCreat
     tupleStructPatInstance: PatTupleStruct
   ): String = {
     val typeFullname = tupleStructPatInstance.path match {
-      case Some(path) => typeFullnameForPath(filename, parentFullname, path)
+      case Some(path) => typeFullnameForPath(filename, parentFullname, path, tupleStructPatInstance.qself)
       case None       => Defines.Unknown
     }
 

@@ -233,7 +233,7 @@ trait TypeFullnameForType(implicit schemaValidationMode: ValidationMode) { this:
   }
 
   def typeFullnameForTypeGroup(filename: String, parentFullname: String, typeGroupInstance: TypeGroup): String = {
-    // Temporary
+    // NOTE: Just temporary, need to find out what "TypeGroup" (in rust code form) is
     val typeFullname = typeGroupInstance.elem match {
       case Some(elem) => typeFullnameForType(filename, parentFullname, elem)
       case None       => Defines.Unknown
@@ -343,7 +343,7 @@ trait TypeFullnameForType(implicit schemaValidationMode: ValidationMode) { this:
       typeTraitObjectInstance.bounds.map(codeForTypeParamBound(filename, parentFullname, _)).mkString(" + ")
     val typeFullname = typeTraitObjectInstance.dyn match {
       case Some(true) => s"dyn $boundsCode"
-      case _          => s"${boundsCode}"
+      case _          => boundsCode
     }
     typeFullname
   }
