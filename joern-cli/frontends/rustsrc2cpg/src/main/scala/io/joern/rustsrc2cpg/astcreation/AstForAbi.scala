@@ -17,8 +17,8 @@ import scala.collection.mutable.ListBuffer
 trait AstForAbi(implicit schemaValidationMode: ValidationMode) { this: AstCreator =>
   val DEFAULT_ABI_NAME = "C"
 
-  def astForAbi(filename: String, parentFullname: String, abi: Abi): Ast = {
-    val abiName = nameForAbi(filename, parentFullname, Some(abi))
+  def astForAbi(filename: String, parentFullname: String, abi: Option[Abi]): Ast = {
+    val abiName = nameForAbi(filename, parentFullname, abi)
     val code    = s"extern \"${abiName}\" { }"
 
     val abiNamespace = NewNamespaceBlock()

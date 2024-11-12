@@ -1,6 +1,5 @@
 package io.joern.rustsrc2cpg.astcreation
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import io.joern.rustsrc2cpg.ast.*
 import io.joern.x2cpg.Ast
 import io.joern.x2cpg.AstCreatorBase
@@ -22,8 +21,6 @@ import scala.collection.mutable.Stack
 
 enum PathCPGNodeType {
   case IDENTIFIER_NODE
-  // case FIELD_IDENTIFIER_NODE
-  // case LITERAL_NODE
   case TYPEREF_NODE
   case METHODREF_NODE
 }
@@ -82,47 +79,38 @@ class AstCreator(
     with AstNodeBuilder[RustAst, AstCreator] {
 
   protected val logger: Logger                                   = LoggerFactory.getLogger(classOf[AstCreator])
-  protected val objectMapper: ObjectMapper                       = ObjectMapper()
-  protected val namespaceStack: Stack[NewNode]                   = Stack.empty
-  protected val namespaceMap: HashMap[String, NewNamespaceBlock] = HashMap.empty
+  protected val namespaceStack: Stack[NewNamespaceBlock]         = Stack.empty
   protected val scope: Scope[String, (NewNode, String), NewNode] = new Scope()
 
-  protected val primitiveTypeSet: HashSet[String] = HashSet(
-    Primitives.BOOL,
-    Primitives.CHAR,
-    Primitives.STR,
-    Primitives.U8,
-    Primitives.U16,
-    Primitives.U32,
-    Primitives.U64,
-    Primitives.U128,
-    Primitives.USIZE,
-    Primitives.I8,
-    Primitives.I16,
-    Primitives.I32,
-    Primitives.I64,
-    Primitives.I128,
-    Primitives.ISIZE,
-    Primitives.F32,
-    Primitives.F64,
-    Primitives.UNIT
-  )
-  protected val typeSet: HashSet[String]                  = HashSet().concat(primitiveTypeSet)
-  protected val typeDeclMap: HashMap[String, NewTypeDecl] = HashMap.empty
-  protected val localNodeMap: HashMap[String, NewLocal]   = HashMap.empty
-  protected val methodNodeMap: HashMap[String, NewMethod] = HashMap.empty
-  protected val typeNodeMap: HashMap[String, NewType]     = HashMap.empty
+  // protected val primitiveTypeSet: HashSet[String] = HashSet(
+  //   Primitives.BOOL,
+  //   Primitives.CHAR,
+  //   Primitives.STR,
+  //   Primitives.U8,
+  //   Primitives.U16,
+  //   Primitives.U32,
+  //   Primitives.U64,
+  //   Primitives.U128,
+  //   Primitives.USIZE,
+  //   Primitives.I8,
+  //   Primitives.I16,
+  //   Primitives.I32,
+  //   Primitives.I64,
+  //   Primitives.I128,
+  //   Primitives.ISIZE,
+  //   Primitives.F32,
+  //   Primitives.F64,
+  //   Primitives.UNIT
+  // )
+  // protected val typeSet: HashSet[String]                  = HashSet().concat(primitiveTypeSet)
 
   protected var currentPathCpgNodeType: PathCPGNodeType              = PathCPGNodeType.IDENTIFIER_NODE
   protected def getCurrentPathCpgNodeType: PathCPGNodeType           = currentPathCpgNodeType
   protected def setCurrentPathCpgNodeType(nodeType: PathCPGNodeType) = currentPathCpgNodeType = nodeType
 
   def createAst(): DiffGraphBuilder = {
-    val fileNode = NewFile()
-      .name(filePathCompareToCrate)
-      .order(0)
-
-    val ast = Ast(fileNode).withChild(astForTranslationUnit(rootNode))
+    val fileNode = NewFile().name(filePathCompareToCrate)
+    val ast      = Ast(fileNode).withChild(astForTranslationUnit(rootNode))
     Ast.storeInDiffGraph(ast, diffGraph)
     diffGraph
   }
@@ -141,14 +129,14 @@ class AstCreator(
       case Some(attrs) => attrs.map(astForAttribute(filePathCompareToCrate, parentFullname, _)).toList
       case None        => List()
     }
-    val itemAst      = root.items.map(astForItem(filePathCompareToCrate, parentFullname, _)).toList
-    val childrenAsts = annotationsAst ++ itemAst
-    setArgumentIndices(childrenAsts)
+    val itemAst = root.items.map(astForItem(filePathCompareToCrate, parentFullname, _)).toList
 
     scope.popScope()
     namespaceStack.pop()
 
-    Ast(namespaceBlock).withChildren(childrenAsts)
+    Ast(namespaceBlock)
+      .withChildren(itemAst)
+      .withChildren(annotationsAst)
   }
 
   //  TODO: Need implements correctly

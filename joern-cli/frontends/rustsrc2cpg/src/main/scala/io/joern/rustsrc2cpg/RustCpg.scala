@@ -1,8 +1,5 @@
 package io.joern.rustsrc2cpg
 
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import io.joern.rustsrc2cpg.Config
 import io.joern.rustsrc2cpg.Frontend.defaultConfig
 import io.joern.rustsrc2cpg.ast.*

@@ -31,6 +31,19 @@ trait AstForImplItem(implicit schemaValidationMode: ValidationMode) { this: AstC
   }
 
   def astForImplItemConst(filename: String, parentFullname: String, constImplItemInstance: ImplItemConst): Ast = {
+    val typeFullName = constImplItemInstance.ty match {
+      case Some(ty) => typeFullnameForType(filename, parentFullname, ty)
+      case None     => Defines.Unknown
+    }
+    val exprCode = constImplItemInstance.expr match {
+      case Some(expr) => codeForExpr(filename, parentFullname, expr)
+      case None       => Defines.Unknown
+    }
+    val localCode = s"const ${constImplItemInstance.ident}: ${typeFullName}"
+    val fullCode  = s"${localCode} = ${exprCode}"
+    val constNode = localNode(constImplItemInstance, constImplItemInstance.ident, localCode, typeFullName)
+    scope.addToScope(constImplItemInstance.ident, (constNode, typeFullName))
+
     val annotationsAst = constImplItemInstance.attrs match {
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
@@ -49,20 +62,6 @@ trait AstForImplItem(implicit schemaValidationMode: ValidationMode) { this: AstC
       case None           => Ast()
     }
 
-    val typeFullName = constImplItemInstance.ty match {
-      case Some(ty) => typeFullnameForType(filename, parentFullname, ty)
-      case None     => Defines.Unknown
-    }
-    val exprCode = constImplItemInstance.expr match {
-      case Some(expr) => codeForExpr(filename, parentFullname, expr)
-      case None       => Defines.Unknown
-    }
-    val localCode = s"const ${constImplItemInstance.ident}: ${typeFullName}"
-    val fullCode  = s"${localCode} = ${exprCode}"
-
-    val constNode = localNode(constImplItemInstance, constImplItemInstance.ident, localCode, typeFullName)
-    localNodeMap.put(constImplItemInstance.ident, constNode)
-
     Ast(memberNode(constImplItemInstance, constImplItemInstance.ident, fullCode, typeFullName))
       .withChild(Ast(constNode))
       .withChild(typeAst)
@@ -76,15 +75,26 @@ trait AstForImplItem(implicit schemaValidationMode: ValidationMode) { this: AstC
     val newMethodNode = methodNode(fnImplItemInstance, fnImplItemInstance.ident, "", "", filename).isExternal(
       fnImplItemInstance.stmts.isEmpty
     )
+    scope.addToScope(fnImplItemInstance.ident, (newMethodNode, fnImplItemInstance.ident))
+
+    scope.pushNewScope(newMethodNode)
 
     val annotationsAst = fnImplItemInstance.attrs match {
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
     }
-    val bodyAst = astForBlock(filename, parentFullname, fnImplItemInstance.stmts)
+    val modifierNode = modifierForVisibility(filename, parentFullname, fnImplItemInstance.vis)
+    val genericsAst = fnImplItemInstance.generics match {
+      case Some(generics) => astForGenerics(filename, parentFullname, generics)
+      case None           => Ast()
+    }
     val parameterIns = fnImplItemInstance.inputs.zipWithIndex.map { case (input, index) =>
       astForFnArg(filename, parentFullname, input, index)
     }.toList
+    val variadicAst = fnImplItemInstance.variadic match {
+      case Some(variadic) => astForVariadic(filename, parentFullname, variadic)
+      case _              => Ast()
+    }
     val methodRetNode = fnImplItemInstance.output match {
       case Some(output) => {
         val typeFullname = typeFullnameForType(filename, parentFullname, output)
@@ -98,16 +108,9 @@ trait AstForImplItem(implicit schemaValidationMode: ValidationMode) { this: AstC
       }
       case None => Ast(methodReturnNode(UnknownAst(), ""))
     }
-    val variadicAst = fnImplItemInstance.variadic match {
-      case Some(variadic) => astForVariadic(filename, parentFullname, variadic)
-      case _              => Ast()
-    }
-    val genericsAst = fnImplItemInstance.generics match {
-      case Some(generics) => astForGenerics(filename, parentFullname, generics)
-      case None           => Ast()
-    }
+    val bodyAst = astForBlock(filename, parentFullname, fnImplItemInstance.stmts)
 
-    val modifierNode = modifierForVisibility(filename, parentFullname, fnImplItemInstance.vis)
+    scope.popScope()
 
     val methodAst =
       Ast(newMethodNode)
@@ -123,11 +126,23 @@ trait AstForImplItem(implicit schemaValidationMode: ValidationMode) { this: AstC
   }
 
   def astForImplItemType(filename: String, parentFullname: String, typeImplItemInstance: ImplItemType): Ast = {
+    val modifierNode = modifierForVisibility(filename, parentFullname, typeImplItemInstance.vis)
+
+    val typeFullname = typeImplItemInstance.ty match {
+      case Some(ty) => typeFullnameForType(filename, parentFullname, ty)
+      case None     => Defines.Unknown
+    }
+    val code = s"type ${typeImplItemInstance.ident} = ${typeFullname}"
+    val node =
+      typeDeclNode(typeImplItemInstance, typeImplItemInstance.ident, typeFullname, filename, code)
+    scope.addToScope(typeImplItemInstance.ident, (node, code))
+
+    scope.pushNewScope(node)
+
     val annotationsAst = typeImplItemInstance.attrs match {
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
     }
-    val modifierNode = modifierForVisibility(filename, parentFullname, typeImplItemInstance.vis)
     val genericsAst = typeImplItemInstance.generics match {
       case Some(generics) => astForGenerics(filename, parentFullname, generics)
       case None           => Ast()
@@ -137,10 +152,7 @@ trait AstForImplItem(implicit schemaValidationMode: ValidationMode) { this: AstC
       case None     => Ast()
     }
 
-    val typeFullname = typeImplItemInstance.ty.map(typeFullnameForType(filename, parentFullname, _)).getOrElse("")
-    val code         = s"type ${typeImplItemInstance.ident} = ${typeFullname}"
-    val node =
-      typeDeclNode(typeImplItemInstance, typeImplItemInstance.ident, typeFullname, filename, code)
+    scope.popScope()
 
     Ast(memberNode(typeImplItemInstance, typeImplItemInstance.ident, code, typeFullname))
       .withChild(Ast(node))

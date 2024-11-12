@@ -61,21 +61,14 @@ trait AstForPat(implicit schemaValidationMode: ValidationMode) { this: AstCreato
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
     }
-
     val subpatAst = identPatInstance.subpat match {
       case Some(subpat) => astForPat(filename, parentFullname, subpat)
       case None         => Ast()
     }
 
-    val code = codeForPatIdent(filename, parentFullname, identPatInstance)
-    val identNode =
-      identifierNode(identPatInstance, identPatInstance.ident, identPatInstance.ident, "")
-    // val identAst = localNodeMap.get(identPatInstance.ident) match {
-    //   case Some(localNode) => {
-    //     Ast(identNode).withRefEdge(identNode, localNode)
-    //   }
-    //   case None => Ast(identNode)
-    // }
+    setCurrentPathCpgNodeType(PathCPGNodeType.IDENTIFIER_NODE)
+    val code      = codeForPatIdent(filename, parentFullname, identPatInstance)
+    val identNode = identifierNode(identPatInstance, identPatInstance.ident, identPatInstance.ident, "")
 
     Ast(unknownNode(identPatInstance, code))
       .withChild(Ast(identNode))

@@ -543,3 +543,21 @@ val METHOD_REF_NODE = "METHOD_REF_NODE"
 - TypePath - TYPE_REF_NODE
 - UsePath - Namespace
 - VisibilityRestricted - TYPE_REF_NODE
+
+# Đã xử lý scope
+
+- AstForArm
+- AstForExpr
+- AstForFn
+- AstForFnArg
+- AstForForeignItem
+- AstForGenericParam
+- AstForImplItem
+- AstForItem
+- AstForTraitItem
+- AstForWherePredicate
+
+- Thử bỏ wrapper cho Condition, sửa lại condition chấp nhận local node hoặc sửa local node của cond thành CallAst
+- Thử sửa lại path angle bracket để lấy được path ref đúng và generic argument
+- Ref được type argument đến type argument (không khả thi)
+- Thử chuyển AstForType sang Type thay vì toàn bộ là TypeRef. Phân biệt rõ TypeDecl, Type

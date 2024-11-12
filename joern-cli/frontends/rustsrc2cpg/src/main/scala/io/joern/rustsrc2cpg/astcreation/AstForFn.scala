@@ -41,6 +41,7 @@ trait AstForFn(implicit schemaValidationMode: ValidationMode) { this: AstCreator
     }
 
     val node = parameterInNode(variadicInstance, name, code, -1, true, EvaluationStrategies.BY_VALUE, "")
+    scope.addToScope(name, (node, code))
 
     Ast(node)
       .withChildren(annotationsAst)
@@ -48,10 +49,9 @@ trait AstForFn(implicit schemaValidationMode: ValidationMode) { this: AstCreator
 
   def astForVariant(filename: String, parentFullname: String, variantInstance: Variant): Ast = {
     val name = variantInstance.ident
-    var code = variantInstance.ident
-    code = variantInstance.discriminant match {
-      case Some(discriminant) => s"$code = ${codeForExpr(filename, parentFullname, discriminant)}"
-      case None               => code
+    val code = variantInstance.discriminant match {
+      case Some(discriminant) => s"$name = ${codeForExpr(filename, parentFullname, discriminant)}"
+      case None               => name
     }
     val typeFullname = s"${parentFullname}::${variantInstance.ident}"
 
@@ -59,9 +59,15 @@ trait AstForFn(implicit schemaValidationMode: ValidationMode) { this: AstCreator
       case Some(attrs) => attrs.map(astForAttribute(filename, typeFullname, _)).toList
       case None        => List()
     }
+
     val node = memberNode(variantInstance, name, code, typeFullname)
       .astParentFullName(parentFullname)
       .astParentType(classOf[ItemEnum].getSimpleName)
+
+    val parentScope = scope.popScope()
+    // Variant is a also a type, so we need to add it to the parent scope
+    scope.addToScope(typeFullname, (node, typeFullname))
+    parentScope.foreach(scope.pushNewScope)
 
     variantInstance.discriminant match {
       case Some(discriminant) => {
@@ -71,15 +77,20 @@ trait AstForFn(implicit schemaValidationMode: ValidationMode) { this: AstCreator
           .withChildren(annotationsAst)
       }
       case None => {
+
+        scope.pushNewScope(node)
+
         val fieldsAst = variantInstance.fields match {
           case Some(fields) => astForFields(filename, typeFullname, fields)
           case None         => Ast()
         }
+
+        scope.popScope()
+
         Ast(node)
           .withChild(fieldsAst)
           .withChildren(annotationsAst)
       }
     }
-
   }
 }

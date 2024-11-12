@@ -20,13 +20,10 @@ import scala.collection.mutable.ListBuffer
 
 trait AstForStmt(implicit schemaValidationMode: ValidationMode) { this: AstCreator =>
   def astForBlock(filename: String, parentFullname: String, blockInstance: Block): Ast = {
-    val node = blockNode(WrapperAst(), "{}", "")
-
-    scope.pushNewScope(node)
     val stmtsAst = blockInstance.map(astForStmt(filename, parentFullname, _)).toList
-    scope.popScope()
-
-    blockAst(node, stmtsAst)
+    val code     = codeForBlock(filename, parentFullname, blockInstance)
+    val wrapper  = blockNode(WrapperAst(), code, "")
+    blockAst(wrapper, stmtsAst)
   }
 
   def astForStmt(filename: String, parentFullname: String, stmtInstance: Stmt): Ast = {

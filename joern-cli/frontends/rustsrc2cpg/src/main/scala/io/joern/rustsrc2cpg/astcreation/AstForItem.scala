@@ -54,6 +54,19 @@ trait AstForItem(implicit schemaValidationMode: ValidationMode) { this: AstCreat
   }
 
   def astForItemConst(filename: String, parentFullname: String, itemConst: ItemConst): Ast = {
+    val typeFullName = itemConst.ty match {
+      case Some(ty) => typeFullnameForType(filename, parentFullname, ty)
+      case None     => Defines.Unknown
+    }
+    val exprCode = itemConst.expr match {
+      case Some(expr) => codeForExpr(filename, parentFullname, expr)
+      case None       => Defines.Unknown
+    }
+    val localCode    = s"const ${itemConst.ident}: ${typeFullName}"
+    val fullCode     = s"${localCode} = ${exprCode}"
+    val newLocalNode = localNode(itemConst, itemConst.ident, localCode, typeFullName)
+    scope.addToScope(itemConst.ident, (newLocalNode, typeFullName))
+
     val annotationsAst = itemConst.attrs match {
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
@@ -63,7 +76,6 @@ trait AstForItem(implicit schemaValidationMode: ValidationMode) { this: AstCreat
       case Some(generics) => astForGenerics(filename, parentFullname, generics)
       case None           => Ast()
     }
-
     val typeAst = itemConst.ty match {
       case Some(ty) => astForType(filename, parentFullname, ty)
       case None     => Ast()
@@ -72,19 +84,6 @@ trait AstForItem(implicit schemaValidationMode: ValidationMode) { this: AstCreat
       case Some(expr) => astForExpr(filename, parentFullname, expr)
       case None       => Ast()
     }
-    val typeFullName = itemConst.ty match {
-      case Some(ty) => typeFullnameForType(filename, parentFullname, ty)
-      case None     => Defines.Unknown
-    }
-    val localCode    = s"const ${itemConst.ident}: ${typeFullName}"
-    val newLocalNode = localNode(itemConst, itemConst.ident, localCode, typeFullName)
-    localNodeMap.put(itemConst.ident, newLocalNode)
-
-    val exprCode = itemConst.expr match {
-      case Some(expr) => codeForExpr(filename, parentFullname, expr)
-      case None       => Defines.Unknown
-    }
-    val fullCode = s"${localCode} = ${exprCode}"
 
     Ast(unknownNode(itemConst, fullCode))
       .withChild(Ast(newLocalNode))
@@ -96,6 +95,12 @@ trait AstForItem(implicit schemaValidationMode: ValidationMode) { this: AstCreat
   }
 
   def astForItemEnum(filename: String, parentFullname: String, itemEnum: ItemEnum): Ast = {
+    val code        = s"enum ${itemEnum.ident}"
+    val newEnumNode = typeDeclNode(itemEnum, itemEnum.ident, itemEnum.ident, filename, code)
+    scope.addToScope(itemEnum.ident, (newEnumNode, code))
+
+    scope.pushNewScope(newEnumNode)
+
     val annotationsAst = itemEnum.attrs match {
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
@@ -107,9 +112,7 @@ trait AstForItem(implicit schemaValidationMode: ValidationMode) { this: AstCreat
     }
     val variants = itemEnum.variants.map(astForVariant(filename, itemEnum.ident, _)).toList
 
-    val code        = s"enum ${itemEnum.ident}"
-    val newEnumNode = typeDeclNode(itemEnum, itemEnum.ident, itemEnum.ident, filename, code)
-    typeDeclMap.addOne(itemEnum.ident, newEnumNode)
+    scope.popScope()
 
     Ast(newEnumNode)
       .withChild(Ast(modifierNode))
@@ -127,30 +130,46 @@ trait AstForItem(implicit schemaValidationMode: ValidationMode) { this: AstCreat
 
     val importedEntity = itemExternCrate.ident
     val importedAs     = itemExternCrate.rename.getOrElse(itemExternCrate.ident)
-    val code = itemExternCrate.rename match {
-      case Some(rename) => s"${modifierNode.modifierType} extern crate ${importedEntity} as ${importedAs};"
-      case None         => s"${modifierNode.modifierType} extern crate ${importedEntity};"
+    var code = itemExternCrate.rename match {
+      case Some(rename) => {
+        s"extern crate ${importedEntity} as $importedAs;"
+      }
+      case None => s"extern crate ${importedEntity};"
     }
-
+    code = modifierNode.modifierType match {
+      case ModifierTypes.PUBLIC => s"pub $code"
+      case _                    => code
+    }
     val importNode = newImportNode(code, importedEntity, importedAs, itemExternCrate)
 
-    Ast(importNode)
-    // .withChild(Ast(modifierNode))
-    // .withChildren(annotationsAst)
+    Ast(unknownNode(WrapperAst(), code))
+      .withChild(Ast(importNode))
+      .withChild(Ast(modifierNode))
+      .withChildren(annotationsAst)
   }
 
   def astForItemFn(filename: String, parentFullname: String, itemFn: ItemFn): Ast = {
     val newMethodNode = methodNode(itemFn, itemFn.ident, itemFn.ident, "", filename).isExternal(itemFn.stmts.isEmpty)
-    methodNodeMap.put(itemFn.ident, newMethodNode)
+    scope.addToScope(itemFn.ident, (newMethodNode, itemFn.ident))
+
+    scope.pushNewScope(newMethodNode)
 
     val annotationsAst = itemFn.attrs match {
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
     }
-    val bodyAst = astForBlock(filename, parentFullname, itemFn.stmts)
+    val modifierNode = modifierForVisibility(filename, parentFullname, itemFn.vis)
+    val genericsAst = itemFn.generics match {
+      case Some(generics) => astForGenerics(filename, parentFullname, generics)
+      case None           => Ast()
+    }
     val parameterIns = itemFn.inputs.zipWithIndex.map { case (input, index) =>
       astForFnArg(filename, parentFullname, input, index)
     }.toList
+    val variadicAst = itemFn.variadic match {
+      case Some(variadic) => astForVariadic(filename, parentFullname, variadic)
+      case _              => Ast()
+    }
     val methodRetNode = itemFn.output match {
       case Some(output) => {
         val typeFullname = typeFullnameForType(filename, parentFullname, output)
@@ -164,16 +183,9 @@ trait AstForItem(implicit schemaValidationMode: ValidationMode) { this: AstCreat
       }
       case None => Ast(methodReturnNode(UnknownAst(), ""))
     }
-    val variadicAst = itemFn.variadic match {
-      case Some(variadic) => astForVariadic(filename, parentFullname, variadic)
-      case _              => Ast()
-    }
-    val genericsAst = itemFn.generics match {
-      case Some(generics) => astForGenerics(filename, parentFullname, generics)
-      case None           => Ast()
-    }
+    val bodyAst = astForBlock(filename, parentFullname, itemFn.stmts)
 
-    val modifierNode = modifierForVisibility(filename, parentFullname, itemFn.vis)
+    scope.popScope()
 
     Ast(newMethodNode)
       .withChildren(parameterIns :+ variadicAst)
@@ -185,26 +197,24 @@ trait AstForItem(implicit schemaValidationMode: ValidationMode) { this: AstCreat
   }
 
   def astForItemForeignMod(filename: String, parentFullname: String, itemForeignMod: ItemForeignMod): Ast = {
+    val abiName = nameForAbi(filename, parentFullname, itemForeignMod.abi)
+    val code = itemForeignMod.unsafe match {
+      case Some(true) => s"unsafe extern \"${abiName}\" {}"
+      case _          => s"extern \"${abiName}\" {}"
+    }
+
+    val foreignNamespaceAst   = astForAbi(filename, parentFullname, itemForeignMod.abi)
+    val foreignNamespaceBlock = foreignNamespaceAst.root.get.asInstanceOf[NewNamespaceBlock]
+
+    namespaceStack.push(foreignNamespaceBlock)
+    scope.pushNewScope(foreignNamespaceBlock)
+
     val annotationsAst = itemForeignMod.attrs match {
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
     }
-
-    val abiName  = nameForAbi(filename, parentFullname, itemForeignMod.abi)
-    val isUnsafe = itemForeignMod.unsafe.getOrElse(false)
-    val code = if (isUnsafe) { s"unsafe extern \"${abiName}\" {}" }
-    else { s"extern {}" }
-
-    val foreignNamespaceBlock = NewNamespaceBlock()
-      .name(abiName)
-      .fullName(abiName)
-      .filename(filename)
-      .code(code)
-    val foreignNamespaceAst = Ast(foreignNamespaceBlock)
-
-    namespaceStack.push(foreignNamespaceBlock)
-    scope.pushNewScope(foreignNamespaceBlock)
     val foreignItemAst = itemForeignMod.items.map(astForForeignItem(filename, parentFullname, _)).toList
+
     scope.popScope()
     namespaceStack.pop()
 
@@ -214,28 +224,6 @@ trait AstForItem(implicit schemaValidationMode: ValidationMode) { this: AstCreat
   }
 
   def astForItemImpl(filename: String, parentFullname: String, itemImpl: ItemImpl): Ast = {
-    val annotationsAst = itemImpl.attrs match {
-      case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
-      case None        => List()
-    }
-    val genericsAst = itemImpl.generics match {
-      case Some(generics) => astForGenerics(filename, parentFullname, generics)
-      case None           => Ast()
-    }
-
-    setCurrentPathCpgNodeType(PathCPGNodeType.TYPEREF_NODE)
-    val selfTypeAst = itemImpl.self_ty match {
-      case Some(self_ty) => astForType(filename, parentFullname, self_ty)
-      case None          => Ast()
-    }
-
-    setCurrentPathCpgNodeType(PathCPGNodeType.TYPEREF_NODE)
-    val traitImplAst = itemImpl.traitImpl match {
-      case Some((_, path)) => astForPath(filename, parentFullname, path)
-      case None            => Ast()
-    }
-    val itemsAst = itemImpl.items.map(astForImplItem(filename, parentFullname, _)).toList
-
     val structName = itemImpl.self_ty match {
       case Some(self_ty) => typeFullnameForType(filename, parentFullname, self_ty)
       case None          => Defines.Unknown
@@ -248,6 +236,31 @@ trait AstForItem(implicit schemaValidationMode: ValidationMode) { this: AstCreat
       case None => s"impl ${structName}"
     }
     val implNode = typeDeclNode(itemImpl, code, code, filename, code)
+    scope.addToScope(code, (implNode, code))
+
+    scope.pushNewScope(implNode)
+
+    val annotationsAst = itemImpl.attrs match {
+      case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
+      case None        => List()
+    }
+    val genericsAst = itemImpl.generics match {
+      case Some(generics) => astForGenerics(filename, parentFullname, generics)
+      case None           => Ast()
+    }
+    setCurrentPathCpgNodeType(PathCPGNodeType.TYPEREF_NODE)
+    val selfTypeAst = itemImpl.self_ty match {
+      case Some(self_ty) => astForType(filename, parentFullname, self_ty)
+      case None          => Ast()
+    }
+    setCurrentPathCpgNodeType(PathCPGNodeType.TYPEREF_NODE)
+    val traitImplAst = itemImpl.traitImpl match {
+      case Some((_, path)) => astForPath(filename, parentFullname, path)
+      case None            => Ast()
+    }
+    val itemsAst = itemImpl.items.map(astForImplItem(filename, parentFullname, _)).toList
+
+    scope.popScope()
 
     Ast(implNode)
       .withChild(traitImplAst)
@@ -263,7 +276,8 @@ trait AstForItem(implicit schemaValidationMode: ValidationMode) { this: AstCreat
       case None        => List()
     }
     val macroInstance = Macro(itemMacro.path, itemMacro.delimiter, itemMacro.tokens)
-    astForMacro(filename, parentFullname, macroInstance).withChildren(annotationsAst)
+    astForMacro(filename, parentFullname, macroInstance)
+      .withChildren(annotationsAst)
   }
 
   def astForItemMod(filename: String, parentFullname: String, itemMod: ItemMod): Ast = {
@@ -281,22 +295,15 @@ trait AstForItem(implicit schemaValidationMode: ValidationMode) { this: AstCreat
 
         val importNode = newImportNode(code, itemMod.ident, itemMod.ident, itemMod)
 
-        Ast(importNode)
+        Ast(unknownNode(WrapperAst(), code))
+          .withChild(Ast(importNode))
+          .withChild(Ast(modifierNode))
+          .withChildren(annotationsAst)
       }
-      // .withChild(Ast(modifierNode))
-      // .withChildren(annotationsAst)
       case _ =>
         var code = s"mod ${itemMod.ident} {}"
         if (itemMod.unsafe.getOrElse(false)) { code = s"unsafe ${code}" }
         if (modifierNode.modifierType == ModifierTypes.PUBLIC) { code = s"pub ${code}" }
-
-        val contentAst = itemMod.content match {
-          case Some(content) =>
-            val contentBlock    = blockAst(blockNode(WrapperAst()))
-            val contentItemAsts = content.map(astForItem(filename, parentFullname, _)).toList
-            contentBlock.withChildren(contentItemAsts)
-          case None => Ast()
-        }
 
         val modNamespaceBlock = NewNamespaceBlock()
           .name(itemMod.ident)
@@ -305,15 +312,20 @@ trait AstForItem(implicit schemaValidationMode: ValidationMode) { this: AstCreat
           .code(code)
         val modNamespaceAst = Ast(modNamespaceBlock)
 
-        namespaceStack.push(modNamespaceAst.root.get)
+        namespaceStack.push(modNamespaceBlock)
         scope.pushNewScope(modNamespaceBlock)
+
+        val contentAst = itemMod.content match {
+          case Some(content) => content.map(astForItem(filename, parentFullname, _)).toList
+          case None          => List()
+        }
 
         scope.popScope()
         namespaceStack.pop()
 
         modNamespaceAst
           .withChild(Ast(modifierNode))
-          .withChild(contentAst)
+          .withChildren(contentAst)
           .withChildren(annotationsAst)
     }
   }
@@ -325,42 +337,49 @@ trait AstForItem(implicit schemaValidationMode: ValidationMode) { this: AstCreat
     }
     val modifierNode = modifierForVisibility(filename, parentFullname, itemStatic.vis)
 
-    val typeFullname = itemStatic.ty.map(typeFullnameForType(filename, parentFullname, _)).getOrElse("")
-
-    val isMut = itemStatic.mut.contains(StaticMutability.Mut)
-    var code = if (isMut) { s"static mut ${itemStatic.ident}: ${typeFullname}" }
-    else { s"static ${itemStatic.ident}: ${typeFullname}" }
+    val typeFullname = itemStatic.ty match {
+      case Some(ty) => typeFullnameForType(filename, parentFullname, ty)
+      case None     => Defines.Unknown
+    }
+    var code = itemStatic.mut match {
+      case Some(StaticMutability.Mut) => s"static mut ${itemStatic.ident}: ${typeFullname}"
+      case _                          => s"static ${itemStatic.ident}: ${typeFullname}"
+    }
     if (modifierNode.modifierType == ModifierTypes.PUBLIC) { code = s"pub ${code}" }
 
     val newLocalNode = localNode(itemStatic, itemStatic.ident, code, typeFullname)
-    localNodeMap.put(itemStatic.ident, newLocalNode)
+    scope.addToScope(itemStatic.ident, (newLocalNode, typeFullname))
 
-    Ast(unknownNode(itemStatic, ""))
+    Ast(unknownNode(itemStatic, code))
       .withChild(Ast(newLocalNode))
       .withChild(Ast(modifierNode))
       .withChildren(annotationsAst)
   }
 
   def astForItemStruct(filename: String, parentFullname: String, itemStruct: ItemStruct): Ast = {
+    val modifierNode = modifierForVisibility(filename, parentFullname, itemStruct.vis)
+    var code         = s"struct ${itemStruct.ident}"
+    if (modifierNode.modifierType == ModifierTypes.PUBLIC) { code = s"pub ${code}" }
+
+    val newItemStructNode = typeDeclNode(itemStruct, itemStruct.ident, itemStruct.ident, filename, code)
+    scope.addToScope(itemStruct.ident, (newItemStructNode, code))
+
+    scope.pushNewScope(newItemStructNode)
+
     val annotationsAst = itemStruct.attrs match {
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
     }
-    val modifierNode = modifierForVisibility(filename, parentFullname, itemStruct.vis)
     val genericsAst = itemStruct.generics match {
       case Some(generics) => astForGenerics(filename, parentFullname, generics)
       case None           => Ast()
     }
-
-    var code = s"struct ${itemStruct.ident}"
-    if (modifierNode.modifierType == ModifierTypes.PUBLIC) { code = s"pub ${code}" }
     val fieldsAst = itemStruct.fields match {
       case Some(fields) => astForFields(filename, parentFullname, fields)
       case None         => Ast()
     }
 
-    val newItemStructNode = typeDeclNode(itemStruct, itemStruct.ident, itemStruct.ident, filename, code)
-    typeDeclMap.addOne(itemStruct.ident, newItemStructNode)
+    scope.popScope()
 
     Ast(newItemStructNode)
       .withChildren(annotationsAst)
@@ -369,32 +388,30 @@ trait AstForItem(implicit schemaValidationMode: ValidationMode) { this: AstCreat
   }
 
   def astForItemTrait(filename: String, parentFullname: String, itemTrait: ItemTrait): Ast = {
+    val modifierNode = modifierForVisibility(filename, parentFullname, itemTrait.vis)
+
+    val superTraitCode = itemTrait.supertraits.map(codeForTypeParamBound(filename, parentFullname, _)).mkString(" + ")
+    var code           = s"trait ${itemTrait.ident}"
+    if (itemTrait.supertraits.nonEmpty) { code = s"${code}: ${superTraitCode}" }
+    if (itemTrait.unsafe.getOrElse(false)) { code = s"unsafe $code" }
+    if (modifierNode.modifierType == ModifierTypes.PUBLIC) { code = s"pub ${code}" }
+    val newItemTraitNode = typeDeclNode(itemTrait, itemTrait.ident, itemTrait.ident, filename, code)
+    scope.addToScope(itemTrait.ident, (newItemTraitNode, code))
+
+    scope.pushNewScope(newItemTraitNode)
+
     val annotationsAst = itemTrait.attrs match {
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
     }
-    val modifierNode = modifierForVisibility(filename, parentFullname, itemTrait.vis)
     val genericsAst = itemTrait.generics match {
       case Some(generics) => astForGenerics(filename, parentFullname, generics)
       case None           => Ast()
     }
-    val supertraitsAst =
-      itemTrait.supertraits.map(astForTypeParamBound(filename, parentFullname, _)).toList
-    val traitItemsAst = itemTrait.items.map(astForTraitItem(filename, parentFullname, _)).toList
+    val supertraitsAst = itemTrait.supertraits.map(astForTypeParamBound(filename, parentFullname, _)).toList
+    val traitItemsAst  = itemTrait.items.map(astForTraitItem(filename, parentFullname, _)).toList
 
-    val superTraitCode = itemTrait.supertraits.map(codeForTypeParamBound(filename, parentFullname, _)).mkString(" + ")
-
-    var code = s"trait ${itemTrait.ident}"
-    if (itemTrait.supertraits.nonEmpty) {
-      code = s"${code}: ${superTraitCode}"
-    }
-    if (itemTrait.unsafe.getOrElse(false)) {
-      code = s"unsafe $code"
-    }
-    if (modifierNode.modifierType == ModifierTypes.PUBLIC) { code = s"pub ${code}" }
-
-    val newItemTraitNode = typeDeclNode(itemTrait, itemTrait.ident, itemTrait.ident, filename, code)
-    typeDeclMap.addOne(itemTrait.ident, newItemTraitNode)
+    scope.popScope()
 
     Ast(newItemTraitNode)
       .withChildren(traitItemsAst)
@@ -405,24 +422,26 @@ trait AstForItem(implicit schemaValidationMode: ValidationMode) { this: AstCreat
   }
 
   def astForItemTraitAlias(filename: String, parentFullname: String, itemTraitAlias: ItemTraitAlias): Ast = {
+    val modifierNode = modifierForVisibility(filename, parentFullname, itemTraitAlias.vis)
+
+    var code = s"trait ${itemTraitAlias.ident}"
+    if (modifierNode.modifierType == ModifierTypes.PUBLIC) { code = s"pub ${code}" }
+    val newItemTraitAliasNode = typeDeclNode(itemTraitAlias, itemTraitAlias.ident, itemTraitAlias.ident, filename, code)
+    scope.addToScope(itemTraitAlias.ident, (newItemTraitAliasNode, code))
+
+    scope.pushNewScope(newItemTraitAliasNode)
+
     val annotationsAst = itemTraitAlias.attrs match {
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
     }
-    val modifierNode = modifierForVisibility(filename, parentFullname, itemTraitAlias.vis)
     val genericsAst = itemTraitAlias.generics match {
       case Some(generics) => astForGenerics(filename, parentFullname, generics)
       case None           => Ast()
     }
+    val boundsAst = itemTraitAlias.bounds.map(astForTypeParamBound(filename, parentFullname, _)).toList
 
-    var code = s"trait ${itemTraitAlias.ident}"
-    if (modifierNode.modifierType == ModifierTypes.PUBLIC) { code = s"pub ${code}" }
-
-    val boundsAst =
-      itemTraitAlias.bounds.map(astForTypeParamBound(filename, parentFullname, _)).toList
-
-    val newItemTraitAliasNode = typeDeclNode(itemTraitAlias, itemTraitAlias.ident, itemTraitAlias.ident, filename, code)
-    typeDeclMap.addOne(itemTraitAlias.ident, newItemTraitAliasNode)
+    scope.popScope()
 
     Ast(newItemTraitAliasNode)
       .withChildren(annotationsAst)
@@ -431,11 +450,24 @@ trait AstForItem(implicit schemaValidationMode: ValidationMode) { this: AstCreat
   }
 
   def astForItemType(filename: String, parentFullname: String, itemType: ItemType): Ast = {
+    val modifierNode = modifierForVisibility(filename, parentFullname, itemType.vis)
+
+    val typeFullname = itemType.ty match {
+      case Some(ty) => typeFullnameForType(filename, parentFullname, ty)
+      case None     => Defines.Unknown
+    }
+    var code = s"type ${itemType.ident} = ${typeFullname}"
+    if (modifierNode.modifierType == ModifierTypes.PUBLIC) { code = s"pub ${code}" }
+    val newItemTypeNode =
+      typeDeclNode(itemType, itemType.ident, itemType.ident, filename, code).aliasTypeFullName(typeFullname)
+    scope.addToScope(itemType.ident, (newItemTypeNode, code))
+
+    scope.pushNewScope(newItemTypeNode)
+
     val annotationsAst = itemType.attrs match {
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
     }
-    val modifierNode = modifierForVisibility(filename, parentFullname, itemType.vis)
     val genericsAst = itemType.generics match {
       case Some(generics) => astForGenerics(filename, parentFullname, generics)
       case None           => Ast()
@@ -445,16 +477,7 @@ trait AstForItem(implicit schemaValidationMode: ValidationMode) { this: AstCreat
       case None     => Ast()
     }
 
-    val typeFullname = itemType.ty match {
-      case Some(ty) => typeFullnameForType(filename, parentFullname, ty)
-      case None     => Defines.Unknown
-    }
-    var code = s"type ${itemType.ident} = ${typeFullname}"
-    if (modifierNode.modifierType == ModifierTypes.PUBLIC) { code = s"pub ${code}" }
-    val newItemTypeNode =
-      typeDeclNode(itemType, itemType.ident, itemType.ident, filename, code)
-        .aliasTypeFullName(typeFullname)
-    typeDeclMap.addOne(itemType.ident, newItemTypeNode)
+    scope.popScope()
 
     Ast(newItemTypeNode)
       .withChild(typeAst)
@@ -464,21 +487,31 @@ trait AstForItem(implicit schemaValidationMode: ValidationMode) { this: AstCreat
   }
 
   def astForItemUnion(filename: String, parentFullname: String, itemUnion: ItemUnion): Ast = {
+    val modifierNode = modifierForVisibility(filename, parentFullname, itemUnion.vis)
+
+    var code = s"union ${itemUnion.ident} {}"
+    if (modifierNode.modifierType == ModifierTypes.PUBLIC) { code = s"pub ${code}" }
+    val newItemUnionNode = typeDeclNode(itemUnion, itemUnion.ident, itemUnion.ident, filename, code)
+    scope.addToScope(itemUnion.ident, (newItemUnionNode, code))
+
+    scope.pushNewScope(newItemUnionNode)
+
     val annotationsAst = itemUnion.attrs match {
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
     }
-    val modifierNode = modifierForVisibility(filename, parentFullname, itemUnion.vis)
     val genericsAst = itemUnion.generics match {
       case Some(generics) => astForGenerics(filename, parentFullname, generics)
       case None           => Ast()
     }
+    val fieldsAst = itemUnion.fields match {
+      case Some(fields) => fields.map(astForField(filename, parentFullname, _)).toList
+      case None         => List()
+    }
 
-    val code            = s"union ${itemUnion.ident} {}"
-    val newItemTypeNode = typeDeclNode(itemUnion, itemUnion.ident, itemUnion.ident, filename, code)
-    typeDeclMap.addOne(itemUnion.ident, newItemTypeNode)
+    scope.popScope()
 
-    Ast(newItemTypeNode)
+    Ast(newItemUnionNode)
       .withChildren(annotationsAst)
       .withChild(genericsAst)
   }
@@ -508,7 +541,7 @@ trait AstForItem(implicit schemaValidationMode: ValidationMode) { this: AstCreat
 
     val importNode = newImportNode(code, importedEntity, importedAs, itemUse)
 
-    Ast(unknownNode(itemUse, ""))
+    Ast(unknownNode(WrapperAst(), code))
       .withChild(Ast(importNode))
       .withChild(Ast(modifierNode))
       .withChildren(annotationsAst)

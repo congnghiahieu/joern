@@ -53,6 +53,7 @@ trait AstForFnArg(implicit schemaValidationMode: ValidationMode) { this: AstCrea
       case false => EvaluationStrategies.BY_VALUE
     }
     val node = parameterInNode(patTypeInstance, name, code, parameterIndex, false, evaluationStrategy, typeFullname)
+    scope.addToScope(name, (node, typeFullname))
 
     Ast(node)
       .withChild(patAst)
@@ -114,8 +115,10 @@ trait AstForFnArg(implicit schemaValidationMode: ValidationMode) { this: AstCrea
       case None        => List()
     }
     val code = codeForBareFnArg(filename, parentFullname, bareFnArgInstance)
-    val node = parameterInNode(bareFnArgInstance, "", code, 0, false, EvaluationStrategies.BY_VALUE, "")
-    Ast(node).withChildren(annotationsAst)
+    val node = typeRefNode(bareFnArgInstance, code, code)
+
+    Ast(node)
+      .withChildren(annotationsAst)
   }
 
   def codeForBareFnArg(filename: String, parentFullname: String, bareFnArgInstance: BareFnArg): String = {
@@ -133,6 +136,8 @@ trait AstForFnArg(implicit schemaValidationMode: ValidationMode) { this: AstCrea
     }
     val code = codeForBareVariadic(filename, parentFullname, bareVariadicInstance)
     val node = parameterInNode(bareVariadicInstance, "", code, 0, false, EvaluationStrategies.BY_VALUE, "")
+    scope.addToScope(code, (node, code))
+
     Ast(node).withChildren(annotationsAst)
   }
 

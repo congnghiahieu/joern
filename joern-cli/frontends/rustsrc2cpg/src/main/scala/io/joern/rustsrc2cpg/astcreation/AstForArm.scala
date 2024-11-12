@@ -17,19 +17,21 @@ import scala.collection.mutable.ListBuffer
 
 trait AstForArm(implicit schemaValidationMode: ValidationMode) { this: AstCreator =>
   def astForArm(filename: String, parentFullname: String, arm: Arm): Ast = {
+    val code    = "case"
+    val armNode = controlStructureNode(arm, "CASE", code)
+
+    scope.pushNewScope(armNode)
+
     val annotationsAst = arm.attrs match {
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
     }
-
-    val code    = "case"
-    val armNode = controlStructureNode(arm, "CASE", code)
-
     setCurrentPathCpgNodeType(PathCPGNodeType.TYPEREF_NODE)
     val patAst = arm.pat match {
       case Some(pat) => astForPat(filename, armNode.parserTypeName, pat)
       case None      => Ast()
     }
+    setCurrentPathCpgNodeType(PathCPGNodeType.IDENTIFIER_NODE)
     val guardAst = arm.guard match {
       case Some(guard) => astForExpr(filename, armNode.parserTypeName, guard)
       case None        => Ast()
@@ -39,6 +41,8 @@ trait AstForArm(implicit schemaValidationMode: ValidationMode) { this: AstCreato
       case Some(body) => astForExpr(filename, armNode.parserTypeName, body)
       case None       => Ast()
     }
+
+    scope.popScope()
 
     controlStructureAst(armNode, Some(conditionAst), Seq(bodyAst))
       .withChildren(annotationsAst)

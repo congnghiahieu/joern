@@ -41,7 +41,9 @@ trait AstForWherePredicate(implicit schemaValidationMode: ValidationMode) { this
     val boundsCode =
       lifetimeWherePredicateInstance.bounds.map(codeForLifetime(filename, parentFullname, _)).mkString(" + ")
 
-    val lifetimePredicateAst = astForLifetimeAsParam(filename, parentFullname, lifetimeWherePredicateInstance.lifetime)
+    val lifetimePredicateNode = NewLifetimeParameter()
+      .name(lifetimeCode)
+      .code(lifetimeCode)
     val boundsAst = lifetimeWherePredicateInstance.bounds.nonEmpty match {
       case true =>
         val bounds  = lifetimeWherePredicateInstance.bounds.map(astForLifetime(filename, parentFullname, _)).toList
@@ -54,9 +56,19 @@ trait AstForWherePredicate(implicit schemaValidationMode: ValidationMode) { this
       case true  => s"$lifetimeCode: $boundsCode"
       case false => lifetimeCode
     }
+    val ast = scope.lookupVariable(lifetimeCode) match {
+      case Some(newNode, _) => {
+        newNode match {
+          case lifetimeParameterNode: NewLifetimeParameter =>
+            Ast(lifetimePredicateNode).withRefEdge(lifetimePredicateNode, lifetimeParameterNode)
+          case _ => Ast(lifetimePredicateNode)
+        }
+      }
+      case _ => Ast(lifetimePredicateNode)
+    }
 
     Ast(unknownNode(lifetimeWherePredicateInstance, code))
-      .withChild(lifetimePredicateAst)
+      .withChild(ast)
       .withChild(boundsAst)
   }
 
@@ -99,28 +111,20 @@ trait AstForWherePredicate(implicit schemaValidationMode: ValidationMode) { this
     val node = NewTypeParameter()
       .name(parameterName)
       .code(code)
+    val ast = scope.lookupVariable(parameterName) match {
+      case Some(newNode, _) => {
+        newNode match {
+          case typeParameterNode: NewTypeParameter =>
+            Ast(node).withRefEdge(node, typeParameterNode)
+          case _ => Ast(node)
+        }
+      }
+      case _ => Ast(node)
+    }
 
     Ast(unknownNode(typeWherePredicateInstance, code))
-      .withChild(Ast(node))
+      .withChild(ast)
       .withChild(boundWrapper)
-  }
-
-  def astForLifetimeAsArgument(filename: String, parentFullname: String, lifetimeInstance: Lifetime): Ast = {
-    val code = codeForLifetime(filename, parentFullname, lifetimeInstance)
-    val node = NewLifetimeArgument()
-      .name(code)
-      .code(code)
-
-    Ast(node)
-  }
-
-  def astForLifetimeAsParam(filename: String, parentFullname: String, lifetimeInstance: Lifetime): Ast = {
-    val code = codeForLifetime(filename, parentFullname, lifetimeInstance)
-    val node = NewLifetimeParameter()
-      .name(code)
-      .code(code)
-
-    Ast(node)
   }
 
   def astForLifetime(filename: String, parentFullname: String, lifetimeInstance: Lifetime): Ast = {

@@ -46,9 +46,12 @@ trait AstForTokenTree(implicit schemaValidationMode: ValidationMode) { this: Ast
 
   private def astForIdent(filename: String, parentFullname: String, identInstance: Ident): Ast = {
     val identNode = identifierNode(UnknownAst(), identInstance, identInstance, "")
-    val identAst = localNodeMap.get(identInstance) match {
-      case Some(localNode) => {
-        Ast(identNode).withRefEdge(identNode, localNode)
+    val identAst = scope.lookupVariable(identInstance) match {
+      case Some((newNode, _)) => {
+        newNode match {
+          case localNode: NewLocal => Ast(identNode).withRefEdge(identNode, localNode)
+          case _                   => Ast(identNode)
+        }
       }
       case None => Ast(identNode)
     }

@@ -33,9 +33,12 @@ trait AstForMeta(implicit schemaValidationMode: ValidationMode) { this: AstCreat
     getCurrentPathCpgNodeType match {
       case PathCPGNodeType.IDENTIFIER_NODE => {
         val node = identifierNode(pathInstance, fullname, fullname, "")
-        val nodeAst = localNodeMap.get(fullname) match {
-          case Some(localNode) => {
-            Ast(node).withRefEdge(node, localNode)
+        val nodeAst = scope.lookupVariable(fullname) match {
+          case Some((newNode, _)) => {
+            newNode match {
+              case localNode: NewLocal => Ast(node).withRefEdge(node, localNode)
+              case _                   => Ast(node)
+            }
           }
           case None => Ast(node)
         }
@@ -43,26 +46,26 @@ trait AstForMeta(implicit schemaValidationMode: ValidationMode) { this: AstCreat
       }
       case PathCPGNodeType.TYPEREF_NODE => {
         val node = typeRefNode(pathInstance, fullname, fullname)
-
-        var nodeAst = typeNodeMap.get(fullname) match {
-          case Some(typeNode) => {
-            Ast(node).withRefEdge(node, typeNode)
+        val nodeAst = scope.lookupVariable(fullname) match {
+          case Some((newNode, _)) => {
+            newNode match {
+              case typeNode: NewType         => Ast(node).withRefEdge(node, typeNode)
+              case typeDeclNode: NewTypeDecl => Ast(node).withRefEdge(node, typeDeclNode)
+              case _                         => Ast(node)
+            }
           }
           case None => Ast(node)
-        }
-        nodeAst = typeDeclMap.get(fullname) match {
-          case Some(typeDeclNode) => {
-            nodeAst.withRefEdge(node, typeDeclNode)
-          }
-          case None => nodeAst
         }
         nodeAst
       }
       case PathCPGNodeType.METHODREF_NODE => {
         val node = methodRefNode(pathInstance, fullname, fullname, "")
-        val nodeAst = methodNodeMap.get(fullname) match {
-          case Some(methodNode) => {
-            Ast(node).withRefEdge(node, methodNode)
+        val nodeAst = scope.lookupVariable(fullname) match {
+          case Some((newNode, _)) => {
+            newNode match {
+              case methodNode: NewMethod => Ast(node).withRefEdge(node, methodNode)
+              case _                     => Ast(node)
+            }
           }
           case None => Ast(node)
         }

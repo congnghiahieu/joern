@@ -30,26 +30,31 @@ trait AstForGenericParam(implicit schemaValidationMode: ValidationMode) { this: 
     parentFullname: String,
     lifetimeParamInstance: LifetimeParam
   ): Ast = {
+    val lifetimeCode = codeForLifetime(filename, parentFullname, lifetimeParamInstance.lifetime)
+    val boundsCode   = lifetimeParamInstance.bounds.map(codeForLifetime(filename, parentFullname, _)).mkString(" + ")
+
     val annotationsAst = lifetimeParamInstance.attrs match {
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
     }
-    val lifetimePredicateAst = astForLifetimeAsParam(filename, parentFullname, lifetimeParamInstance.lifetime)
 
+    val lifetimeParamNode = NewLifetimeParameter()
+      .name(lifetimeCode)
+      .code(lifetimeCode)
     val boundsAst = lifetimeParamInstance.bounds.nonEmpty match {
       case true =>
         val bounds = lifetimeParamInstance.bounds.map(astForLifetime(filename, parentFullname, _)).toList
-        val boundsCode =
-          lifetimeParamInstance.bounds.map(codeForLifetime(filename, parentFullname, _)).mkString(" + ")
+
         val wrapper = Ast(unknownNode(BoundAst(), boundsCode))
         wrapper.withChildren(bounds)
       case false => Ast()
     }
 
     val code = codeForLifetimeGenericParam(filename, parentFullname, lifetimeParamInstance)
+    scope.addToScope(code, (lifetimeParamNode, code))
 
     Ast(unknownNode(lifetimeParamInstance, code))
-      .withChild(lifetimePredicateAst)
+      .withChild(Ast(lifetimeParamNode))
       .withChild(boundsAst)
       .withChildren(annotationsAst)
   }
@@ -74,10 +79,10 @@ trait AstForGenericParam(implicit schemaValidationMode: ValidationMode) { this: 
     }
 
     val code = codeForTypeGenericParam(filename, parentFullname, typeParamInstance)
-
     val typeParameterNode = NewTypeParameter()
       .name(typeParamInstance.ident)
       .code(typeParamInstance.ident)
+    scope.addToScope(typeParamInstance.ident, (typeParameterNode, code))
 
     Ast(unknownNode(typeParamInstance, code))
       .withChild(Ast(typeParameterNode))
@@ -101,10 +106,10 @@ trait AstForGenericParam(implicit schemaValidationMode: ValidationMode) { this: 
     }
 
     val code = codeForConstGenericParam(filename, parentFullname, constParamInstance)
-
     val typeParameterNode = NewTypeParameter()
       .name(constParamInstance.ident)
       .code(constParamInstance.ident)
+    scope.addToScope(constParamInstance.ident, (typeParameterNode, code))
 
     Ast(unknownNode(constParamInstance, code))
       .withChild(Ast(typeParameterNode))
