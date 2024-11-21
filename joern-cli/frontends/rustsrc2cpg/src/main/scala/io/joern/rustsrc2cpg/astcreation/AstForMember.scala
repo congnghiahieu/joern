@@ -14,17 +14,22 @@ import io.shiftleft.codepropertygraph.generated.ModifierTypes
 import io.shiftleft.codepropertygraph.generated.nodes.*
 
 import scala.collection.mutable.ListBuffer
+import io.joern.x2cpg.utils.NodeBuilders.newOperatorCallNode
+import io.shiftleft.codepropertygraph.generated.Operators
 
 trait AstForMember(implicit schemaValidationMode: ValidationMode) { this: AstCreator =>
   def astForMember(filename: String, parentFullname: String, member: Member): Ast = {
     if (member.named.isDefined) {
-      val name      = member.named.get
-      val identNode = fieldIdentifierNode(UnknownAst(), name, name)
-      Ast(identNode)
+      val name = member.named.get
+      val identNode =
+        fieldIdentifierNode(UnknownAst(), name, name)
+      val node = newOperatorCallNode(Operators.fieldAccess, name)
+      callAst(node, Seq(Ast(identNode)))
     } else if (member.unnamed.isDefined) {
       val name      = member.unnamed.get.toString
       val indexNode = fieldIdentifierNode(UnknownAst(), name, name)
-      Ast(indexNode)
+      val node      = newOperatorCallNode(Operators.fieldAccess, name)
+      callAst(node, Seq(Ast(indexNode)))
     } else {
       throw new IllegalArgumentException("Unsupported member type")
     }

@@ -12,6 +12,7 @@ import io.joern.x2cpg.passes.frontend.MetaDataPass
 import io.joern.x2cpg.utils.Report
 import io.shiftleft.codepropertygraph.Cpg
 import io.shiftleft.codepropertygraph.generated.Languages
+import better.files.File.{usingTemporaryDirectory, newTemporaryDirectory}
 
 import java.io.File
 import scala.util.Try
@@ -28,23 +29,22 @@ class RustCpg extends X2CpgFrontend[Config] {
     }
 
     X2Cpg.withNewEmptyCpg(config.outputPath, config) { (cpg, config) =>
-      better.files.File.usingTemporaryDirectory("rustsrc2cpg_tmp") { tempOutputDir =>
-        val cargoCrate = CargoCrate(config)
+      val tempOutputDir = newTemporaryDirectory("rustsrc2cpg_")
+      val cargoCrate    = CargoCrate(config)
 
-        new MetaDataPass(cpg, Languages.RUSTLANG, rootPath).createAndApply()
+      new MetaDataPass(cpg, Languages.RUSTLANG, rootPath).createAndApply()
 
-        val astCreationPass = new AstCreationPass(cpg, config, tempOutputDir.path, cargoCrate, report)
-        astCreationPass.createAndApply()
+      val astCreationPass = new AstCreationPass(cpg, config, tempOutputDir.path, cargoCrate, report)
+      astCreationPass.createAndApply()
 
-        // val typeResolverPass =
-        //   new TypeResolverPass(cpg, astCreationPass.getUsedPrimitiveTypes().toSeq)
-        // typeResolverPass.createAndApply()
+      // val typeResolverPass =
+      //   new TypeResolverPass(cpg, astCreationPass.getUsedPrimitiveTypes().toSeq)
+      // typeResolverPass.createAndApply()
 
-        val moduleResovelerPass = new CrateResolverPass(cpg, cargoCrate)
-        moduleResovelerPass.createAndApply()
+      val moduleResovelerPass = new CrateResolverPass(cpg, cargoCrate)
+      moduleResovelerPass.createAndApply()
 
-        report.print()
-      }
+      report.print()
     }
   }
 }

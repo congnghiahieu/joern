@@ -14,73 +14,17 @@ import io.shiftleft.codepropertygraph.generated.ModifierTypes
 import scala.collection.mutable.ListBuffer
 
 trait AstForFields(implicit schemaValidationMode: ValidationMode) { this: AstCreator =>
-  def astForFields(filename: String, parentFullname: String, fieldsInstance: Fields): Ast = {
+  def astForFields(filename: String, parentFullname: String, fieldsInstance: Fields): List[Ast] = {
     fieldsInstance match {
       case fieldsNotUnit: FieldsNotUnit =>
         if (fieldsNotUnit.named.isDefined) {
-          val fieldsNotUnitAst = unknownNode(WrapperAst(), "").parserTypeName("FieldsNamed")
-          val fieldsAst        = fieldsNotUnit.named.get.map(astForField(filename, "FieldsNamed", _))
-          Ast(fieldsNotUnitAst).withChildren(fieldsAst)
+          fieldsNotUnit.named.get.map(astForField(filename, parentFullname, _)).toList
         } else {
-          val fieldsNotUnitAst = unknownNode(WrapperAst(), "").parserTypeName("FieldsUnnamed")
-          val fieldsAst        = fieldsNotUnit.unnamed.get.map(astForField(filename, "FieldsUnnamed", _))
-          Ast(fieldsNotUnitAst).withChildren(fieldsAst)
+          fieldsNotUnit.unnamed.get.map(astForField(filename, parentFullname, _)).toList
         }
       case fieldsUnit: FieldsUnit =>
-        // val fieldsUnitAst = literalNode(fieldsUnit, Primitives.UNIT, "UNIT")
-        // Ast(fieldsUnitAst)
-        Ast()
+        List()
     }
-  }
-
-  def astForFieldPat(filename: String, parentFullname: String, fieldPatInstance: FieldPat): Ast = {
-    val annotationsAst = fieldPatInstance.attrs match {
-      case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
-      case None        => List()
-    }
-
-    setCurrentPathCpgNodeType(PathCPGNodeType.TYPEREF_NODE)
-    val patAst = fieldPatInstance.pat match {
-      case Some(pat) => astForPat(filename, parentFullname, pat)
-      case None      => Ast()
-    }
-
-    val fieldIdent    = Member(fieldPatInstance.named, fieldPatInstance.unnamed)
-    val fieldIdentAst = astForMember(filename, parentFullname, fieldIdent)
-
-    val fieldName = codeForMember(filename, parentFullname, fieldIdent)
-    val code      = codeForFieldPat(filename, parentFullname, fieldPatInstance)
-
-    val node = memberNode(fieldPatInstance, fieldName, code, "")
-    Ast(node)
-      .withChild(fieldIdentAst)
-      .withChild(patAst)
-      .withChildren(annotationsAst)
-  }
-
-  def astForFieldValue(filename: String, parentFullname: String, fieldValueInstance: FieldValue): Ast = {
-    val annotationsAst = fieldValueInstance.attrs match {
-      case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
-      case None        => List()
-    }
-
-    setCurrentPathCpgNodeType(PathCPGNodeType.IDENTIFIER_NODE)
-    val exprAst = fieldValueInstance.expr match {
-      case Some(expr) => astForExpr(filename, parentFullname, expr)
-      case None       => Ast()
-    }
-
-    val fieldIdent    = Member(fieldValueInstance.named, fieldValueInstance.unnamed)
-    val fieldIdentAst = astForMember(filename, parentFullname, fieldIdent)
-
-    val fieldName = codeForMember(filename, parentFullname, fieldIdent)
-    val code      = codeForFieldValue(filename, parentFullname, fieldValueInstance)
-
-    val node = memberNode(fieldValueInstance, fieldName, code, "")
-    Ast(node)
-      .withChild(fieldIdentAst)
-      .withChild(exprAst)
-      .withChildren(annotationsAst)
   }
 
   def astForField(filename: String, parentFullname: String, fieldInstance: Field): Ast = {
@@ -106,7 +50,8 @@ trait AstForFields(implicit schemaValidationMode: ValidationMode) { this: AstCre
     }
     val code = codeForField(filename, parentFullname, fieldInstance)
     val node = memberNode(WrapperAst(), name, code, typeFullname)
-      .astParentFullName(parentFullname)
+      .astParentFullName("Member")
+      .astParentType("Member")
 
     val identNodeAst = fieldInstance.ident match {
       case Some(ident) => Ast(identifierNode(fieldInstance, ident, ident, typeFullname))
@@ -116,9 +61,64 @@ trait AstForFields(implicit schemaValidationMode: ValidationMode) { this: AstCre
     Ast(node)
       .withChild(typeAst)
       .withChild(identNodeAst)
-      .withChild(Ast(modifierNode))
+      // .withChild(Ast(modifierNode))
       .withChildren(annotationsAst)
   }
+
+  def astForFieldPat(filename: String, parentFullname: String, fieldPatInstance: FieldPat): Ast = {
+    val annotationsAst = fieldPatInstance.attrs match {
+      case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
+      case None        => List()
+    }
+
+    setCurrentPathCpgNodeType(PathCPGNodeType.TYPEREF_NODE)
+    val patAst = fieldPatInstance.pat match {
+      case Some(pat) => astForPat(filename, parentFullname, pat)
+      case None      => Ast()
+    }
+
+    val fieldIdent    = Member(fieldPatInstance.named, fieldPatInstance.unnamed)
+    val fieldIdentAst = astForMember(filename, parentFullname, fieldIdent)
+
+    val fieldName = codeForMember(filename, parentFullname, fieldIdent)
+    val code      = codeForFieldPat(filename, parentFullname, fieldPatInstance)
+    val node = memberNode(fieldPatInstance, fieldName, code, "")
+      .astParentFullName("FieldPat")
+      .astParentType("FieldPat")
+
+    Ast(node)
+      .withChild(fieldIdentAst)
+      .withChild(patAst)
+      .withChildren(annotationsAst)
+  }
+
+  def astForFieldValue(filename: String, parentFullname: String, fieldValueInstance: FieldValue): Ast = {
+    val annotationsAst = fieldValueInstance.attrs match {
+      case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
+      case None        => List()
+    }
+
+    setCurrentPathCpgNodeType(PathCPGNodeType.IDENTIFIER_NODE)
+    val exprAst = fieldValueInstance.expr match {
+      case Some(expr) => astForExpr(filename, parentFullname, expr)
+      case None       => Ast()
+    }
+
+    val fieldIdent    = Member(fieldValueInstance.named, fieldValueInstance.unnamed)
+    val fieldIdentAst = astForMember(filename, parentFullname, fieldIdent)
+
+    val fieldName = codeForMember(filename, parentFullname, fieldIdent)
+    val code      = codeForFieldValue(filename, parentFullname, fieldValueInstance)
+    val node = memberNode(fieldValueInstance, fieldName, code, "")
+      .astParentFullName("FieldValue")
+      .astParentType("FieldValue")
+
+    Ast(node)
+      .withChild(fieldIdentAst)
+      .withChild(exprAst)
+      .withChildren(annotationsAst)
+  }
+
 }
 
 trait CodeForFields(implicit schemaValidationMode: ValidationMode) { this: AstCreator =>

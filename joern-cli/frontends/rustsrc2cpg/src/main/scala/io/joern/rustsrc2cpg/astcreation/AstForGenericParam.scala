@@ -25,6 +25,7 @@ trait AstForGenericParam(implicit schemaValidationMode: ValidationMode) { this: 
       throw new IllegalArgumentException("Unsupported generic param type")
     }
   }
+
   def astForLifetimeGenericParam(
     filename: String,
     parentFullname: String,

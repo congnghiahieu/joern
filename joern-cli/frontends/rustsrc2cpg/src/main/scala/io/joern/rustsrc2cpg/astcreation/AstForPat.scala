@@ -130,9 +130,8 @@ trait AstForPat(implicit schemaValidationMode: ValidationMode) { this: AstCreato
       case None        => List()
     }
 
-    val code = codeForPatRest(filename, parentFullname, restPatInstance)
-    val identNode =
-      identifierNode(restPatInstance, code, code, "")
+    val code      = codeForPatRest(filename, parentFullname, restPatInstance)
+    val identNode = identifierNode(restPatInstance, code, code, "")
     Ast(identNode)
   }
 

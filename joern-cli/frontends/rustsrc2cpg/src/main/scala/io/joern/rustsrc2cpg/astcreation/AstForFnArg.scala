@@ -11,6 +11,7 @@ import io.joern.x2cpg.utils.NodeBuilders.newThisParameterNode
 import io.shiftleft.codepropertygraph.generated.EvaluationStrategies
 import io.shiftleft.codepropertygraph.generated.ModifierTypes
 import io.shiftleft.codepropertygraph.generated.nodes.*
+import io.shiftleft.codepropertygraph.generated.EdgeTypes
 
 import scala.collection.mutable.ListBuffer
 
@@ -32,6 +33,27 @@ trait AstForFnArg(implicit schemaValidationMode: ValidationMode) { this: AstCrea
     patTypeInstance: PatType,
     parameterIndex: Int
   ): Ast = {
+    val code = codeForPatType(filename, parentFullname, patTypeInstance)
+    val (lhsCode, typeFullname) = {
+      val parts = code.split(":")
+      parts.length match {
+        case 1 =>
+          (parts(0), "_")
+        case 2 =>
+          (parts(0), parts(1))
+        case _ =>
+          throw new RuntimeException(s"Unexpected pattern parts: ${parts.mkString(": ")}")
+      }
+    }
+    // remove subPat, mut and ref (see class PatIdent)
+    val identOnly = lhsCode.split("@").head.replace("mut", "").replace("ref", "").trim
+    val evaluationStrategy = typeFullname.contains("&") match {
+      case true  => EvaluationStrategies.BY_REFERENCE
+      case false => EvaluationStrategies.BY_VALUE
+    }
+    val letNode = localNode(patTypeInstance, identOnly, code, typeFullname)
+    scope.addToScope(identOnly, (letNode, code))
+
     val annotationsAst = patTypeInstance.attrs match {
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
@@ -45,36 +67,17 @@ trait AstForFnArg(implicit schemaValidationMode: ValidationMode) { this: AstCrea
       case None     => Ast()
     }
 
-    val code         = codeForPatType(filename, parentFullname, patTypeInstance)
-    val name         = code.split(":").map(_.trim).head
-    val typeFullname = code.split(":").map(_.trim).last
-    val evaluationStrategy = typeFullname.contains("&") match {
-      case true  => EvaluationStrategies.BY_REFERENCE
-      case false => EvaluationStrategies.BY_VALUE
-    }
-    val node = parameterInNode(patTypeInstance, name, code, parameterIndex, false, evaluationStrategy, typeFullname)
-    scope.addToScope(name, (node, typeFullname))
+    val parameterNode =
+      parameterInNode(patTypeInstance, identOnly, code, parameterIndex, false, evaluationStrategy, typeFullname)
 
-    Ast(node)
+    Ast(parameterNode)
+      .withChild(Ast(letNode))
       .withChild(patAst)
       .withChild(typeAst)
       .withChildren(annotationsAst)
   }
 
   def astForReceiver(filename: String, parentFullname: String, receiverInstance: Receiver, parameterIndex: Int): Ast = {
-    val annotationsAst = receiverInstance.attrs match {
-      case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
-      case None        => List()
-    }
-    val typeAst = receiverInstance.ty match {
-      case Some(ty) => astForType(filename, parentFullname, ty)
-      case None     => Ast()
-    }
-    val lifetimeAst = receiverInstance.lifetime match {
-      case Some(lifetime) => astForLifetime(filename, parentFullname, lifetime)
-      case None           => Ast()
-    }
-
     val evaluationStrategy = receiverInstance.ref match {
       case Some(true) => EvaluationStrategies.BY_REFERENCE
       case _          => EvaluationStrategies.BY_VALUE
@@ -84,7 +87,6 @@ trait AstForFnArg(implicit schemaValidationMode: ValidationMode) { this: AstCrea
       case Some(ty) => typeFullnameForType(filename, parentFullname, ty)
       case None     => Defines.Unknown
     }
-
     var codePrefix = receiverInstance.ref match {
       case Some(true) => s"&"
       case _          => s""
@@ -99,13 +101,39 @@ trait AstForFnArg(implicit schemaValidationMode: ValidationMode) { this: AstCrea
     }
     val code = s"${codePrefix} self"
 
-    val node =
+    val parameterNode =
       newThisParameterNode(name, code, typeFullname, evaluationStrategy = evaluationStrategy).index(parameterIndex)
-    scope.addToScope(name, (node, typeFullname))
+    scope.addToScope(name, (parameterNode, typeFullname))
 
-    Ast(node)
+    val annotationsAst = receiverInstance.attrs match {
+      case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
+      case None        => List()
+    }
+    val typeAst = receiverInstance.ty match {
+      case Some(ty) => astForType(filename, parentFullname, ty)
+      case None     => Ast()
+    }
+    val lifetimeAst = receiverInstance.lifetime match {
+      case Some(lifetime) => {
+        val ast = astForLifetime(filename, parentFullname, lifetime)
+        ast.root.get match {
+          case lifetimeNode: NewLifetime => {
+            diffGraph.addEdge(parameterNode, lifetimeNode, EdgeTypes.AST)
+            diffGraph.addEdge(parameterNode, lifetimeNode, EdgeTypes.OUT_LIVE)
+            diffGraph.addEdge(parameterNode, lifetimeNode, EdgeTypes.REF)
+          }
+          case _ => {
+            throw new RuntimeException("Unexpected node type")
+          }
+        }
+        ast
+      }
+      case None => Ast()
+    }
+
+    Ast(parameterNode)
       .withChild(typeAst)
-      .withChild(lifetimeAst)
+      // .withChild(lifetimeAst)
       .withChildren(annotationsAst)
   }
 

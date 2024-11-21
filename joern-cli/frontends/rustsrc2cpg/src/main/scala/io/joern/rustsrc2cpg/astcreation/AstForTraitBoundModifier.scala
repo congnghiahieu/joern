@@ -16,28 +16,28 @@ import scala.collection.mutable.ListBuffer
 
 trait AstForTraitBoundModifier(implicit schemaValidationMode: ValidationMode) { this: AstCreator =>
   def astForTraitBound(filename: String, parentFullname: String, traitBound: TraitBound): Ast = {
-    // val lifetimeBoundsAst = traitBound.lifetimes match {
-    //   case Some(lifetimes) => lifetimes.map(astForGenericParam(filename, parentFullname, _))
-    //   case None            => List()
-    // }
-
-    // setCurrentPathCpgNodeType(PathCPGNodeType.TYPEREF_NODE)
-    // val pathAst = traitBound.path match {
-    //   case Some(path) => astForPath(filename, parentFullname, path)
-    //   case None       => Ast()
-    // }
-    // val code = codeForTraitBound(filename, parentFullname, traitBound)
-
-    // Ast(unknownNode(traitBound, code))
-    //   .withChild(pathAst)
-    //   .withChildren(lifetimeBoundsAst)
 
     setCurrentPathCpgNodeType(PathCPGNodeType.TYPEREF_NODE)
     val pathAst = traitBound.path match {
       case Some(path) => astForPath(filename, parentFullname, path)
       case None       => Ast()
     }
-    pathAst
+
+    val lifetimeBoundsAst = traitBound.lifetimes match {
+      case Some(lifetimes) => lifetimes.map(astForGenericParam(filename, parentFullname, _)).toList
+      case None            => List()
+    }
+
+    lifetimeBoundsAst.isEmpty match {
+      case true => pathAst
+      case false => {
+        val code = codeForTraitBound(filename, parentFullname, traitBound)
+
+        Ast(unknownNode(traitBound, code))
+          .withChild(pathAst)
+          .withChildren(lifetimeBoundsAst)
+      }
+    }
   }
 
   def codeForTraitBound(filename: String, parentFullname: String, traitBound: TraitBound): String = {
@@ -54,6 +54,14 @@ trait AstForTraitBoundModifier(implicit schemaValidationMode: ValidationMode) { 
       case Some(TraitBoundModifier.Maybe) => s"?$code"
       case _                              => code
     }
+    code = traitBound.lifetimes match {
+      case Some(lifetimes) => {
+        val lifetimeParameterCode = lifetimes.map(codeForGenericParam(filename, parentFullname, _)).mkString(", ")
+        s"for <$lifetimeParameterCode> $code"
+      }
+      case None => code
+    }
+
     code
   }
 }

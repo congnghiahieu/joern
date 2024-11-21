@@ -40,14 +40,14 @@ trait AstForTokenTree(implicit schemaValidationMode: ValidationMode) { this: Ast
     }
   }
 
-  private def astForGroup(filename: String, parentFullname: String, groupInstance: Group): Ast = {
+  def astForGroup(filename: String, parentFullname: String, groupInstance: Group): Ast = {
     val code         = codeForGroup(filename, parentFullname, groupInstance)
     val typeFullname = codeForGroup(filename, parentFullname, groupInstance)
     val node         = literalNode(groupInstance, code, typeFullname)
     Ast(node)
   }
 
-  private def astForIdent(filename: String, parentFullname: String, identInstance: Ident): Ast = {
+  def astForIdent(filename: String, parentFullname: String, identInstance: Ident): Ast = {
     val identNode = identifierNode(UnknownAst(), identInstance, identInstance, "")
     val identAst = scope.lookupVariable(identInstance) match {
       case Some((newNode, _)) => {
@@ -61,14 +61,14 @@ trait AstForTokenTree(implicit schemaValidationMode: ValidationMode) { this: Ast
     identAst
   }
 
-  private def astForPunct(filename: String, parentFullname: String, punctInstance: Punct): Ast = {
+  def astForPunct(filename: String, parentFullname: String, punctInstance: Punct): Ast = {
     val code         = codeForPunct(filename, parentFullname, punctInstance)
     val typeFullname = codeForPunct(filename, parentFullname, punctInstance)
     val node         = literalNode(punctInstance, code, typeFullname)
     Ast(node)
   }
 
-  private def astForLiteral(filename: String, parentFullname: String, literalInstance: Literal): Ast = {
+  def astForLiteral(filename: String, parentFullname: String, literalInstance: Literal): Ast = {
     val node = literalNode(UnknownAst(), literalInstance, literalInstance)
     Ast(node)
   }

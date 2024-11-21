@@ -13,6 +13,8 @@ import io.shiftleft.codepropertygraph.generated.ModifierTypes
 import io.shiftleft.codepropertygraph.generated.nodes.*
 
 import scala.collection.mutable.ListBuffer
+import io.joern.x2cpg.utils.NodeBuilders.newOperatorCallNode
+import io.shiftleft.codepropertygraph.generated.Operators
 
 trait AstForTraitItem(implicit schemaValidationMode: ValidationMode) { this: AstCreator =>
   def astForTraitItem(filename: String, parentFullname: String, traitItemInstance: TraitItem): Ast = {
@@ -42,17 +44,18 @@ trait AstForTraitItem(implicit schemaValidationMode: ValidationMode) { this: Ast
     }
     val localCode = s"const ${traitItemConst.ident}: ${typeFullName}"
     val fullCode  = s"${localCode} = ${defaultCode}"
-    val newLocal  = localNode(traitItemConst, traitItemConst.ident, localCode, typeFullName)
-    scope.addToScope(traitItemConst.ident, (newLocal, typeFullName))
+    val constNode = localNode(traitItemConst, traitItemConst.ident, localCode, typeFullName)
+    scope.addToScope(traitItemConst.ident, (constNode, typeFullName))
 
     val annotationsAst = traitItemConst.attrs match {
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
     }
-    val genericAst = traitItemConst.generics match {
+    val genericsAst = traitItemConst.generics match {
       case Some(generics) => astForGenerics(filename, parentFullname, generics)
       case None           => Ast()
     }
+    val idenAst = astForIdent(filename, parentFullname, traitItemConst.ident)
     val typeAst = traitItemConst.ty match {
       case Some(ty) => astForType(filename, parentFullname, ty)
       case None     => Ast()
@@ -62,11 +65,12 @@ trait AstForTraitItem(implicit schemaValidationMode: ValidationMode) { this: Ast
       case None       => Ast()
     }
 
-    Ast(memberNode(traitItemConst, traitItemConst.ident, fullCode, typeFullName))
-      .withChild(Ast(newLocal))
-      .withChild(typeAst)
-      .withChild(defaultAst)
-      .withChild(genericAst)
+    val assignmentNode = newOperatorCallNode(Operators.assignment, fullCode)
+
+    callAst(assignmentNode, Seq(idenAst, typeAst, defaultAst))
+      .withChild(Ast(constNode))
+      // .withChild(Ast(modifierNode))
+      .withChild(genericsAst)
       .withChildren(annotationsAst)
   }
 
@@ -118,25 +122,36 @@ trait AstForTraitItem(implicit schemaValidationMode: ValidationMode) { this: Ast
       .withChildren(annotationsAst)
       .withChild(genericsAst)
 
-    Ast(memberNode(traitItemFn, traitItemFn.ident, "", ""))
-      .withChild(methodAst)
+    methodAst
+
+    // val node = memberNode(traitItemFn, traitItemFn.ident, "", "")
+    //   .astParentFullName("Member")
+    //   .astParentType("Member")
+    // Ast(node)
+    //   .withChild(methodAst)
   }
 
   def astForTraitItemType(filename: String, parentFullname: String, traitItemType: TraitItemType): Ast = {
-    var code = s"type ${traitItemType.ident}"
-    code = traitItemType.bounds.nonEmpty match {
+    var lhsCode = traitItemType.bounds.nonEmpty match {
       case true =>
         val boundsCode =
           traitItemType.bounds.map(bound => codeForTypeParamBound(filename, parentFullname, bound)).mkString(" + ")
-        s"$code: ${boundsCode}"
-      case false => code
+        s"type ${traitItemType.ident}: ${boundsCode}"
+      case false => s"type ${traitItemType.ident}"
     }
-    code = traitItemType.default match {
-      case Some(default) => s"$code = ${typeFullnameForType(filename, parentFullname, default)}"
-      case None          => code
+    val (code, newTypeDecl) = traitItemType.default match {
+      case Some(default) =>
+        val rhsCode  = typeFullnameForType(filename, parentFullname, default)
+        val fullCode = s"$lhsCode = $rhsCode"
+        val newTypeDecl = typeDeclNode(traitItemType, traitItemType.ident, traitItemType.ident, filename, fullCode)
+          .aliasTypeFullName(rhsCode)
+        (fullCode, newTypeDecl)
+      case None => {
+        val newTypeDecl = typeDeclNode(traitItemType, traitItemType.ident, traitItemType.ident, filename, lhsCode)
+        (lhsCode, newTypeDecl)
+      }
     }
-    val newTypeDecl = typeDeclNode(traitItemType, traitItemType.ident, traitItemType.ident, filename, code)
-    scope.addToScope(traitItemType.ident, (newTypeDecl, code))
+    scope.addToScope(traitItemType.ident, (newTypeDecl, lhsCode))
 
     val annotationsAst = traitItemType.attrs match {
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
@@ -159,12 +174,21 @@ trait AstForTraitItem(implicit schemaValidationMode: ValidationMode) { this: Ast
       case None          => Ast()
     }
 
-    Ast(memberNode(traitItemType, traitItemType.ident, code, traitItemType.ident))
-      .withChild(Ast(newTypeDecl))
+    Ast(newTypeDecl)
       .withChild(defaultAst)
       .withChild(genericsAst)
       .withChild(boundsAst)
       .withChildren(annotationsAst)
+
+    // val node = memberNode(traitItemType, traitItemType.ident, lhsCode, traitItemType.ident)
+    //   .astParentFullName("Member")
+    //   .astParentType("Member")
+    // Ast(node)
+    //   .withChild(Ast(newTypeDecl))
+    //   .withChild(defaultAst)
+    //   .withChild(genericsAst)
+    //   .withChild(boundsAst)
+    //   .withChildren(annotationsAst)
   }
 
   def astForTraitItemMacro(filename: String, parentFullname: String, traitItemMacro: TraitItemMacro): Ast = {
@@ -175,10 +199,15 @@ trait AstForTraitItem(implicit schemaValidationMode: ValidationMode) { this: Ast
 
     val macroInstance =
       Macro(traitItemMacro.path, traitItemMacro.delimiter, traitItemMacro.tokens)
-    val macroAst =
-      astForMacro(filename, parentFullname, macroInstance, traitItemMacro.semi_token).withChildren(annotationsAst)
+    val macroAst = astForMacro(filename, parentFullname, macroInstance, traitItemMacro.semi_token)
+      .withChildren(annotationsAst)
 
-    Ast(memberNode(traitItemMacro, "", "", ""))
-      .withChild(macroAst)
+    macroAst
+
+    // val node = memberNode(traitItemMacro, "", "", "")
+    //   .astParentFullName("Member")
+    //   .astParentType("Member")
+    // Ast(node)
+    //   .withChild(macroAst)
   }
 }

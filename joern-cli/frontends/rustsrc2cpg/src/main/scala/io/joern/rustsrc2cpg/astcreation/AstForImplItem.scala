@@ -13,6 +13,8 @@ import io.shiftleft.codepropertygraph.generated.ModifierTypes
 import io.shiftleft.codepropertygraph.generated.nodes.*
 
 import scala.collection.mutable.ListBuffer
+import io.joern.x2cpg.utils.NodeBuilders.newOperatorCallNode
+import io.shiftleft.codepropertygraph.generated.Operators
 trait AstForImplItem(implicit schemaValidationMode: ValidationMode) { this: AstCreator =>
   def astForImplItem(filename: String, parentFullname: String, implItemInstance: ImplItem): Ast = {
     if (implItemInstance.constImplItem.isDefined) {
@@ -49,6 +51,7 @@ trait AstForImplItem(implicit schemaValidationMode: ValidationMode) { this: AstC
       case None        => List()
     }
     val modifierNode = modifierForVisibility(filename, parentFullname, constImplItemInstance.vis)
+    val identAst     = astForIdent(filename, parentFullname, constImplItemInstance.ident)
     val typeAst = constImplItemInstance.ty match {
       case Some(ty) => astForType(filename, parentFullname, ty)
       case None     => Ast()
@@ -62,19 +65,17 @@ trait AstForImplItem(implicit schemaValidationMode: ValidationMode) { this: AstC
       case None           => Ast()
     }
 
-    Ast(memberNode(constImplItemInstance, constImplItemInstance.ident, fullCode, typeFullName))
+    val assignmentNode = newOperatorCallNode(Operators.assignment, fullCode)
+
+    callAst(assignmentNode, Seq(identAst, typeAst, exprAst))
       .withChild(Ast(constNode))
-      .withChild(typeAst)
-      .withChild(exprAst)
       .withChild(genericAst)
-      .withChild(Ast(modifierNode))
+      // .withChild(Ast(modifierNode))
       .withChildren(annotationsAst)
   }
 
   def astForImplItemFn(filename: String, parentFullname: String, fnImplItemInstance: ImplItemFn): Ast = {
-    val newMethodNode = methodNode(fnImplItemInstance, fnImplItemInstance.ident, "", "", filename).isExternal(
-      fnImplItemInstance.stmts.isEmpty
-    )
+    val newMethodNode = methodNode(fnImplItemInstance, fnImplItemInstance.ident, "", "", filename)
     scope.addToScope(fnImplItemInstance.ident, (newMethodNode, fnImplItemInstance.ident))
 
     scope.pushNewScope(newMethodNode)
@@ -116,29 +117,43 @@ trait AstForImplItem(implicit schemaValidationMode: ValidationMode) { this: AstC
       Ast(newMethodNode)
         .withChildren(parameterIns :+ variadicAst)
         .withChild(bodyAst)
-        .withChild(Ast(modifierNode))
+        // .withChild(Ast(modifierNode))
         .withChild(methodRetNode)
         .withChildren(annotationsAst)
         .withChild(genericsAst)
 
-    Ast(memberNode(fnImplItemInstance, fnImplItemInstance.ident, "", ""))
-      .withChild(methodAst)
+    methodAst
+
+    // val node = memberNode(fnImplItemInstance, fnImplItemInstance.ident, "", "")
+    //   .astParentFullName("Member")
+    //   .astParentType("Member")
+    // Ast(node)
+    //   .withChild(methodAst)
   }
 
   def astForImplItemType(filename: String, parentFullname: String, typeImplItemInstance: ImplItemType): Ast = {
     val modifierNode = modifierForVisibility(filename, parentFullname, typeImplItemInstance.vis)
 
-    val typeFullname = typeImplItemInstance.ty match {
-      case Some(ty) => typeFullnameForType(filename, parentFullname, ty)
-      case None     => Defines.Unknown
+    var (declNode, code) = typeImplItemInstance.ty match {
+      case Some(ty) => {
+        val typeFullname = typeFullnameForType(filename, parentFullname, ty)
+        val code         = s"type ${typeImplItemInstance.ident} = ${typeFullname}"
+        val node =
+          typeDeclNode(typeImplItemInstance, typeImplItemInstance.ident, typeImplItemInstance.ident, filename, code)
+            .aliasTypeFullName(typeFullname)
+        (node, code)
+      }
+      case None => {
+        val code = s"type ${typeImplItemInstance.ident}"
+        val node =
+          typeDeclNode(typeImplItemInstance, typeImplItemInstance.ident, typeImplItemInstance.ident, filename, code)
+        (node, code)
+      }
     }
-    var code = s"type ${typeImplItemInstance.ident} = ${typeFullname}"
     if (modifierNode.modifierType == ModifierTypes.PUBLIC) { code = s"pub ${code}" }
-    val node =
-      typeDeclNode(typeImplItemInstance, typeImplItemInstance.ident, typeImplItemInstance.ident, filename, code)
-    scope.addToScope(typeImplItemInstance.ident, (node, code))
+    scope.addToScope(typeImplItemInstance.ident, (declNode, code))
 
-    scope.pushNewScope(node)
+    scope.pushNewScope(declNode)
 
     val annotationsAst = typeImplItemInstance.attrs match {
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
@@ -155,12 +170,21 @@ trait AstForImplItem(implicit schemaValidationMode: ValidationMode) { this: AstC
 
     scope.popScope()
 
-    Ast(memberNode(typeImplItemInstance, typeImplItemInstance.ident, code, typeFullname))
-      .withChild(Ast(node))
+    Ast(declNode)
       .withChild(typeAst)
       .withChild(genericsAst)
-      .withChild(Ast(modifierNode))
+      // .withChild(Ast(modifierNode))
       .withChildren(annotationsAst)
+
+    // val node = memberNode(typeImplItemInstance, typeImplItemInstance.ident, code, typeImplItemInstance.ident)
+    //   .astParentFullName("Member")
+    //   .astParentType("Member")
+    // Ast(node)
+    //   .withChild(Ast(declNode))
+    //   .withChild(typeAst)
+    //   .withChild(genericsAst)
+    //   // .withChild(Ast(modifierNode))
+    //   .withChildren(annotationsAst)
   }
 
   def astForImplItemMacro(filename: String, parentFullname: String, macroImplItemInstance: ImplItemMacro): Ast = {
@@ -174,7 +198,12 @@ trait AstForImplItem(implicit schemaValidationMode: ValidationMode) { this: AstC
     val macroAst = astForMacro(filename, parentFullname, marcoInstance, macroImplItemInstance.semi_token)
       .withChildren(annotationsAst)
 
-    Ast(memberNode(macroImplItemInstance, "", "", ""))
-      .withChild(macroAst)
+    macroAst
+
+    // val node = memberNode(macroImplItemInstance, "", "", "")
+    //   .astParentFullName("Member")
+    //   .astParentType("Member")
+    // Ast(node)
+    //   .withChild(macroAst)
   }
 }

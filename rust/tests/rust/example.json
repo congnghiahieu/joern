@@ -1,26 +1,47 @@
 {
   "items": [
     {
+      "const": {
+        "ident": "N",
+        "ty": { "path": { "segments": [{ "ident": "usize" }] } },
+        "expr": { "lit": { "int": "255" } }
+      }
+    },
+    {
       "fn": {
-        "ident": "main",
+        "unsafe": true,
+        "ident": "before",
         "inputs": [],
         "output": null,
         "stmts": [
           {
             "let": {
               "pat": {
-                "ident": {
-                  "ident": "int_reference"
+                "type": {
+                  "pat": { "ident": { "mut": true, "ident": "buf" } },
+                  "ty": {
+                    "path": {
+                      "segments": [
+                        {
+                          "ident": "Vec",
+                          "arguments": {
+                            "angle_bracketed": {
+                              "args": [{ "type": { "path": { "segments": [{ "ident": "u8" }] } } }]
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
                 }
               },
               "init": {
                 "expr": {
-                  "reference": {
-                    "expr": {
-                      "lit": {
-                        "int": "3"
-                      }
-                    }
+                  "call": {
+                    "func": {
+                      "path": { "segments": [{ "ident": "Vec" }, { "ident": "with_capacity" }] }
+                    },
+                    "args": [{ "path": { "segments": [{ "ident": "N" }] } }]
                   }
                 }
               }
@@ -29,62 +50,70 @@
           {
             "expr": [
               {
-                "match": {
-                  "expr": {
-                    "path": {
-                      "segments": [
+                "unsafe": {
+                  "stmts": [
+                    {
+                      "expr": [
                         {
-                          "ident": "int_reference"
-                        }
-                      ]
-                    }
-                  },
-                  "arms": [
-                    {
-                      "pat": {
-                        "reference": {
-                          "pat": {
-                            "paren": {
-                              "pat": {
-                                "range": {
-                                  "start": {
-                                    "lit": {
-                                      "int": "0"
-                                    }
-                                  },
-                                  "limits": "..=",
-                                  "end": {
-                                    "lit": {
-                                      "int": "5"
-                                    }
-                                  }
-                                }
-                              }
-                            }
+                          "method_call": {
+                            "receiver": { "path": { "segments": [{ "ident": "buf" }] } },
+                            "method": "set_len",
+                            "args": [{ "path": { "segments": [{ "ident": "N" }] } }]
                           }
-                        }
-                      },
-                      "body": {
-                        "tuple": {
-                          "elems": []
-                        }
-                      }
-                    },
-                    {
-                      "pat": {
-                        "_": {}
-                      },
-                      "body": {
-                        "tuple": {
-                          "elems": []
-                        }
-                      }
+                        },
+                        false
+                      ]
                     }
                   ]
                 }
               },
-              false
+              true
             ]
+          }
+        ]
+      }
+    },
+    {
+      "fn": {
+        "ident": "after",
+        "inputs": [],
+        "output": null,
+        "stmts": [
+          {
+            "let": {
+              "pat": {
+                "type": {
+                  "pat": { "ident": { "mut": true, "ident": "buf" } },
+                  "ty": {
+                    "path": {
+                      "segments": [
+                        {
+                          "ident": "Vec",
+                          "arguments": {
+                            "angle_bracketed": {
+                              "args": [{ "type": { "path": { "segments": [{ "ident": "u8" }] } } }]
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              },
+              "init": {
+                "expr": {
+                  "macro": {
+                    "path": { "segments": [{ "ident": "vec" }] },
+                    "delimiter": "bracket",
+                    "tokens": [
+                      { "lit": "0" },
+                      { "punct": { "op": ";", "spacing": "alone" } },
+                      { "ident": "N" }
+                    ]
+                  }
+                }
+              }
+            }
           }
         ]
       }

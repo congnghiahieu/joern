@@ -14,12 +14,13 @@ import io.shiftleft.codepropertygraph.generated.nodes.{
   Lifetime as LifetimeCpg,
   NewTypeParameter,
   LifetimeParameter,
-  NewLifetimeParameter
+  NewLifetimeParameter,
+  NewLifetime,
+  NewLifetimeArgument
 }
+import io.shiftleft.codepropertygraph.generated.EdgeTypes
 
 import scala.collection.mutable.ListBuffer
-import io.shiftleft.codepropertygraph.generated.nodes.NewLifetime
-import io.shiftleft.codepropertygraph.generated.nodes.NewLifetimeArgument
 
 trait AstForWherePredicate(implicit schemaValidationMode: ValidationMode) { this: AstCreator =>
   def astForWherePredicate(filename: String, parentFullname: String, wherePredicateInstance: WherePredicate): Ast = {
@@ -59,17 +60,32 @@ trait AstForWherePredicate(implicit schemaValidationMode: ValidationMode) { this
       case _ => Ast(lifetimePredicateNode)
     }
 
-    val boundsAst = lifetimeWherePredicateInstance.bounds.nonEmpty match {
+    val boundsWrapper = lifetimeWherePredicateInstance.bounds.nonEmpty match {
       case true =>
         val bounds  = lifetimeWherePredicateInstance.bounds.map(astForLifetime(filename, parentFullname, _)).toList
-        val wrapper = Ast(unknownNode(BoundAst(), boundsCode))
-        wrapper.withChildren(bounds)
+        val wrapper = unknownNode(BoundAst(), boundsCode)
+
+        bounds.foreach(ast => {
+          val dst = ast.root.get match {
+            case lifetime: NewLifetime => lifetime
+            case _                     => throw new RuntimeException("Expected lifetime node")
+          }
+          diffGraph.addEdge(wrapper, dst, EdgeTypes.AST)
+          diffGraph.addEdge(wrapper, dst, EdgeTypes.OUT_LIVE)
+          diffGraph.addEdge(wrapper, dst, EdgeTypes.CONDITION)
+          diffGraph.addEdge(wrapper, dst, EdgeTypes.IMPORTS)
+          diffGraph.addEdge(wrapper, dst, EdgeTypes.REF)
+          diffGraph.addEdge(wrapper, dst, EdgeTypes.BINDS)
+          diffGraph.addEdge(wrapper, dst, EdgeTypes.BINDS_TO)
+        })
+
+        Ast(wrapper)
       case false => Ast()
     }
 
     Ast(unknownNode(lifetimeWherePredicateInstance, code))
       .withChild(ast)
-      .withChild(boundsAst)
+      .withChild(boundsWrapper)
   }
 
   def astForTypeWherePredicate(
@@ -110,7 +126,7 @@ trait AstForWherePredicate(implicit schemaValidationMode: ValidationMode) { this
 
     val node = NewTypeParameter()
       .name(parameterName)
-      .code(code)
+      .code(parameterName)
     val ast = scope.lookupVariable(parameterName) match {
       case Some(newNode, _) => {
         newNode match {

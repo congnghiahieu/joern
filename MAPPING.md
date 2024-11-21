@@ -24,6 +24,10 @@
 
 # Prompt
 
+- generate a class generic, function generic and the usage example in java
+
+- generate a main function contains 1 conventional if elseif else, 1 conventional for loop, 1 conventional while in js
+
 convert below rust to scala in these line, with NOTE what:
 
 - using `class`
@@ -161,10 +165,6 @@ and use `withChild` instead of `withChildren` for `genericsAst`
 - replace `unknownNode(UnknownAst(), "")` with `unknownNode(variableName, "")`
 
 For example: `unknownNode(UnknownAst(), "")` to `unknownNode(referencePatInstance, "")`
-
-- generate simple examples for all kinds of common Java syntax (generate simple example for each kind of syntax only)
-
-- generate a main function contains 1 conventional if elseif else, 1 conventional for loop, 1 conventional while in js
 
 # Enum
 
@@ -546,29 +546,6 @@ val METHOD_REF_NODE = "METHOD_REF_NODE"
 - UsePath - Namespace
 - VisibilityRestricted - TYPE_REF_NODE
 
-# Đã xử lý scope
-
-- AstForArm
-- AstForExpr
-- AstForFn
-- AstForFnArg
-- AstForForeignItem
-- AstForGenericParam
-- AstForImplItem
-- AstForItem
-- AstForTraitItem
-- AstForWherePredicate
-
-- Thử sửa lại path angle bracket để lấy được path ref đúng và generic argument
-- Ref được type argument đến type parameter (không khả thi)
-- Thử chuyển AstForType sang Type thay vì toàn bộ là TypeRef. Phân biệt rõ TypeDecl, Type
-- Gọi các module cùng file, khác file là chưa làm được. Scope làm được rồi nhưng module thì chưa (hay namespace khác nhau)
-- Xử lý ident đặc biệt như `self`, `super`, `Self`
-- Sửa lại methodParameterIn thành local node, ref được đến method parameter in
-- Cân nhắc có cần phân biệt METHOD_REF, IDENTIFIER hay không. Chỉ cần để là identifier và sau đó ref đến
-- Sửa lại `ItemType` có cạnh là alias of hoặc set alias name = ...
-- Kiểm tra lại mấy node `localNode()`
-
 # EdgeTypes
 
 import io.shiftleft.codepropertygraph.generated.EdgeTypes
@@ -593,3 +570,45 @@ EdgeTypes.REACHING_DEF
 EdgeTypes.RECEIVER
 EdgeTypes.REF
 EdgeTypes.SOURCE_FILE
+
+# Difference syntax in rust
+
+- macro không lấy được AST mà các ký tự tồn tại dưới dạng token (literal). Xử lý bằng cách thử sử dụng `cargo-expand`
+
+- Chưa xử lý được AngleBracketedGenericArguments, ParenthesizedGenericArguments là node con của Path
+- Type ref hiện tại bị cụt, có thể cân nhắc trỏ đến toàn bộ cây của path
+- Thử sửa lại path angle bracket để lấy được path ref đúng và generic argument
+- Type parameter, Type argument, Type chưa ref được tới nhau
+- Ref được type argument đến type parameter (không khả thi)
+- Thử chuyển AstForType sang Type thay vì toàn bộ là TypeRef. Phân biệt rõ TypeDecl, Type
+- Cân nhắc cắt bỏ toàn bộ `typeAst`, `patAst`, `exprAst`
+
+- Chưa xử lý được kiểu `&Self` (không giải được) (có ý tưởng giải là trước đi đi vào thì set 1 cái biến &Self cụ thể là gì). Về cơ bản là giải quyết bài toán vào scope, vào name space, vào block
+- Xử lý ident đặc biệt như `self`, `super`, `Self`
+
+- Chưa có constructor cho Struct Unit, Struct Tuple, Struct Struct
+
+- Chưa xử lý được bài toán vào module (mod)
+- Gọi các module cùng file, khác file là chưa làm được. Scope làm được rồi nhưng module thì chưa (hay namespace khác nhau)
+
+- Chưa xử lý được local (Xét 1 flag local)
+- Kiểm tra lại mấy node `localNode()`
+- Sửa lại methodParameterIn thành local node, ref được đến method parameter in
+
+- Cân nhắc có cần phân biệt METHOD_REF, IDENTIFIER hay không. Chỉ cần để là identifier và sau đó ref đến
+
+- Xem mẫu của code python, js, C để rút gọn các cạnh không cần thiết:
+
+1. Method parameter in chỉ có 1 node duy nhất, không có các node con
+2. Các biến sẽ ref tới method parameter in
+3. Mỗi 1 method sẽ có [TYPE_DECL] (BINDS)-> [BINDING] (REF)-> [METHOD]
+4. Có thể có nhiều modifier (public, static, abstract)
+5. Constructor có modifier là CONSTRUCTOR
+6. Operator không có AST của dấu
+7. Field access là dùng phép call, Operator.fieldAccess
+8. Generic class, class, struct, interface JS có memberN ode, nhưng memberNode đứng độc lập và phần code đứng độc lập. Nói chung memberNode thì tùy lựa chọn sử dụng
+9. Generic trong Java,JS,C không sử dụng TypeParameter
+10. Link TYPE_ARGUMENT và TYPE_PARAMETER (Java, C, không link)
+
+11. Không sử dụng TYPE_REF mà sử dụng TYPE, khai báo riêng (Mỗi lần typeRef là tạo Type, và link đến)
+12. Tạo thêm cạnh member, cạnh outlife, lifetime để chỉ có ra ý nghĩa của lifetime

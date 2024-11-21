@@ -17,6 +17,8 @@ import io.shiftleft.codepropertygraph.generated.nodes.*
 import io.shiftleft.codepropertygraph.generated.nodes.Block.PropertyDefaults as BlockDefaults
 
 import scala.collection.mutable.ListBuffer
+import io.joern.x2cpg.utils.NodeBuilders.newOperatorCallNode
+import io.shiftleft.codepropertygraph.generated.Operators
 
 trait AstForStmt(implicit schemaValidationMode: ValidationMode) { this: AstCreator =>
   def astForBlock(filename: String, parentFullname: String, blockInstance: Block): Ast = {
@@ -55,29 +57,45 @@ trait AstForStmt(implicit schemaValidationMode: ValidationMode) { this: AstCreat
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
     }
-
     val localInitAst = localInstance.init match {
       case Some(init) => astForLocalInit(filename, parentFullname, init)
       case None       => Ast()
     }
-
-    val name = localInstance.pat match {
-      case Some(pat) => codeForPat(filename, parentFullname, pat)
-      case None      => Defines.Unknown
-    }
-    val code = s"let $name"
-    // val node = localNode(localInstance, name, code, "")
-    // localNodeMap.put(name, node)
-
     val patAst = localInstance.pat match {
       case Some(pat) => astForPat(filename, parentFullname, pat)
       case None      => Ast()
     }
 
-    Ast(unknownNode(localInstance, code))
-      // .withChild(Ast(node))
-      .withChild(patAst)
-      .withChild(localInitAst)
+    val (lhsCode, typeFullname) = localInstance.pat match {
+      case Some(pat) =>
+        val parts = codeForPat(filename, parentFullname, pat).split(":")
+        parts.length match {
+          case 1 =>
+            (parts(0), "_")
+          case 2 =>
+            (parts(0), parts(1))
+          case _ =>
+            throw new RuntimeException(s"Unexpected pattern parts: ${parts.mkString(": ")}")
+        }
+      case None => (Defines.Unknown, Defines.Unknown)
+    }
+    // remove subPat, mut and ref (see class PatIdent)
+    val identOnly = lhsCode.split("@").head.replace("mut", "").replace("ref", "").trim
+    val localCode = s"let $lhsCode"
+    val letNode   = localNode(localInstance, identOnly, localCode, typeFullname)
+    scope.addToScope(identOnly, (letNode, localCode))
+
+    val fullCode = localInstance.init match {
+      case Some(init) =>
+        val localInitCode = codeForLocalInit(filename, parentFullname, init)
+        s"$localCode: $typeFullname = $localInitCode"
+      case None => s"$localCode: $typeFullname"
+    }
+
+    val assignmentNode = newOperatorCallNode(Operators.assignment, fullCode)
+
+    callAst(assignmentNode, Seq(patAst, localInitAst))
+      .withChild(Ast(letNode))
       .withChildren(annotationsAst)
   }
 
@@ -98,7 +116,9 @@ trait AstForStmt(implicit schemaValidationMode: ValidationMode) { this: AstCreat
       case None => Ast()
     }
 
-    Ast(unknownNode(localInitInstance, ""))
+    val code = codeForLocalInit(filename, parentFullname, localInitInstance)
+
+    Ast(unknownNode(localInitInstance, code))
       .withChild(exprAst)
       .withChild(divergeAst)
   }
@@ -108,8 +128,9 @@ trait CodeForStmt(implicit schemaValidationMode: ValidationMode) { this: AstCrea
 
   def codeForBlock(filename: String, parentFullname: String, blockInstance: Block): String = {
     val stmtsCode = blockInstance.map(codeForStmt(filename, parentFullname, _)).mkString("\n")
-    s"""
-    {$stmtsCode}
+    s"""{
+    $stmtsCode
+    }
     """.stripMargin
   }
 

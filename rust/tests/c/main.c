@@ -1,32 +1,41 @@
 #include <stdio.h>
 
+// Object-like macro
+#define PI 3.14159
+
+// Function-like macro
+#define SQUARE(x) ((x) * (x))
+
+// Conditional compilation
+#ifdef DEBUG
+  #define LOG(msg) printf("DEBUG: %s\n", msg)
+#else
+  #define LOG(msg)
+#endif
+
+// Stringizing operator
+#define TO_STRING(x) #x
+
+// Token-pasting operator
+#define CONCAT(a, b) a##b
+
 int main() {
+  // Using object-like macro
+  printf("Value of PI: %f\n", PI);
+
+  // Using function-like macro
+  int num = 5;
+  printf("Square of %d: %d\n", num, SQUARE(num));
+
+  // Using conditional compilation
+  LOG("This is a debug message");
+
+  // Using stringizing operator
+  printf("Stringized version of PI: %s\n", TO_STRING(PI));
+
+  // Using token-pasting operator
+  int xy = 100;
+  printf("Value of xy: %d\n", CONCAT(x, y));
+
   return 0;
 }
-
-// int main() {
-//   int x = 10;
-
-//   // Conventional if-elseif-else
-//   if (x > 10) {
-//     printf("x is greater than 10\n");
-//   } else if (x == 10) {
-//     printf("x is equal to 10\n");
-//   } else {
-//     printf("x is less than 10\n");
-//   }
-
-//   // Conventional for loop
-//   for (int i = 0; i < 5; i++) {
-//     printf("i = %d\n", i);
-//   }
-
-//   // Conventional while loop
-//   int y = 0;
-//   while (y < 5) {
-//     printf("y = %d\n", y);
-//     y++;
-//   }
-
-//   return 0;
-// }

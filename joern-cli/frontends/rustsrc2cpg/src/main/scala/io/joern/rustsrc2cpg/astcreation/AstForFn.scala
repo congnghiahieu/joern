@@ -61,8 +61,8 @@ trait AstForFn(implicit schemaValidationMode: ValidationMode) { this: AstCreator
     }
 
     val node = memberNode(variantInstance, name, code, typeFullname)
-      .astParentFullName(parentFullname)
-      .astParentType(classOf[ItemEnum].getSimpleName)
+      .astParentFullName("Variant")
+      .astParentType("Variant")
 
     val parentScope = scope.popScope()
     // Variant is a also a type, so we need to add it to the parent scope
@@ -82,13 +82,13 @@ trait AstForFn(implicit schemaValidationMode: ValidationMode) { this: AstCreator
 
         val fieldsAst = variantInstance.fields match {
           case Some(fields) => astForFields(filename, typeFullname, fields)
-          case None         => Ast()
+          case None         => List()
         }
 
         scope.popScope()
 
         Ast(node)
-          .withChild(fieldsAst)
+          .withChildren(fieldsAst)
           .withChildren(annotationsAst)
       }
     }

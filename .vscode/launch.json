@@ -92,5 +92,16 @@
       "jvmOptions": [],
       "env": {}
     },
+    {
+      "type": "scala",
+      "request": "launch",
+      "name": "rustsrc2cpg Object Main Vulnerabilites",
+      "mainClass": "io.joern.rustsrc2cpg.Main",
+      "args": [
+        "/home/hieucien/Workspace/rust_ecosystem/vulnerabilites"
+      ],
+      "jvmOptions": [],
+      "env": {}
+    },
   ]
 }
