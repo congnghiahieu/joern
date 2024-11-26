@@ -29,6 +29,17 @@
     {
       "type": "scala",
       "request": "launch",
+      "name": "rustsrc2cpg Object Main Download",
+      "mainClass": "io.joern.rustsrc2cpg.Main",
+      "args": [
+        "/home/hieucien/Workspace/joern/rust/tests/rustdownload"
+      ],
+      "jvmOptions": [],
+      "env": {}
+    },
+    {
+      "type": "scala",
+      "request": "launch",
       "name": "rustsrc2cpg Object Main Examples",
       "mainClass": "io.joern.rustsrc2cpg.Main",
       "args": [
@@ -43,7 +54,9 @@
       "name": "rustsrc2cpg Object Main Small Example",
       "mainClass": "io.joern.rustsrc2cpg.Main",
       "args": [
-        "/home/hieucien/Workspace/joern/rust/tests/rust"
+        "/home/hieucien/Workspace/joern/rust/tests/rust",
+        "--rust-parser-path",
+        "/home/hieucien/Workspace/joern/joern-cli/frontends/rustsrc2cpg/bin/rust-parser/rust-parser"
       ],
       "jvmOptions": [],
       "env": {}
@@ -102,6 +115,28 @@
       ],
       "jvmOptions": [],
       "env": {}
+    },
+    {
+      "type": "scala",
+      "request": "launch",
+      "name": "Joern Export",
+      "mainClass": "io.joern.joerncli.JoernExport",
+      "args": [
+        "/home/hieucien/Workspace/joern/joern-cli/frontends/rustsrc2cpg/cpg.bin"
+      ],
+      "jvmOptions": [],
+      "env": {},
+    },
+    {
+      "type": "scala",
+      "request": "launch",
+      "name": "Joern Parse",
+      "mainClass": "io.joern.joerncli.JoernParse",
+      "args": [
+        "/home/hieucien/Workspace/joern/rust/tests/rustdownload",
+      ],
+      "jvmOptions": [],
+      "env": {},
     },
   ]
 }

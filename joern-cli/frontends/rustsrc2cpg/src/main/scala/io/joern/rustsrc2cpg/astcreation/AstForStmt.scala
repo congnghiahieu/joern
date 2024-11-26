@@ -34,7 +34,15 @@ trait AstForStmt(implicit schemaValidationMode: ValidationMode) { this: AstCreat
     } else if (stmtInstance.itemStmt.isDefined) {
       return astForItem(filename, parentFullname, stmtInstance.itemStmt.get)
     } else if (stmtInstance.exprStmt.isDefined) {
-      return astForExpr(filename, parentFullname, stmtInstance.exprStmt.get._1)
+      val exprStmt     = stmtInstance.exprStmt.get
+      val expr         = exprStmt._1
+      val isReturnExpr = !exprStmt._2
+
+      if (isReturnExpr) {
+        return astForExprReturn(filename, parentFullname, ExprReturn(Some(expr)))
+      } else {
+        return astForExpr(filename, parentFullname, expr)
+      }
     } else if (stmtInstance.macroStmt.isDefined) {
       return astForMacroStmt(filename, parentFullname, stmtInstance.macroStmt.get)
     } else {

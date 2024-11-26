@@ -2,7 +2,8 @@ name                     := "joern"
 ThisBuild / organization := "io.joern"
 ThisBuild / scalaVersion := "3.4.3"
 
-// "1.7.12"
+// 1.7.13
+// 999.0.0-SNAPSHOT
 val cpgVersion = "999.0.0-SNAPSHOT"
 
 lazy val joerncli          = Projects.joerncli
@@ -32,6 +33,15 @@ ThisBuild / libraryDependencies ++= Seq(
   "org.apache.logging.log4j" % "log4j-core"        % Versions.log4j % Optional
   // `Optional` means "not transitive", but still included in "stage/lib"
 )
+
+val circeVersion = "0.14.10"
+
+ThisBuild / libraryDependencies ++= Seq(
+  "io.circe" %% "circe-core",
+  "io.circe" %% "circe-generic",
+  "io.circe" %% "circe-parser"
+)
+  .map(_ % circeVersion)
 
 ThisBuild / compile / javacOptions ++= Seq(
   "-g", // debug symbols

@@ -119,8 +119,8 @@ trait AstForFnArg(implicit schemaValidationMode: ValidationMode) { this: AstCrea
         ast.root.get match {
           case lifetimeNode: NewLifetime => {
             diffGraph.addEdge(parameterNode, lifetimeNode, EdgeTypes.AST)
-            diffGraph.addEdge(parameterNode, lifetimeNode, EdgeTypes.OUT_LIVE)
-            diffGraph.addEdge(parameterNode, lifetimeNode, EdgeTypes.REF)
+            // diffGraph.addEdge(parameterNode, lifetimeNode, EdgeTypes.OUT_LIVE)
+            // diffGraph.addEdge(parameterNode, lifetimeNode, EdgeTypes.REF)
           }
           case _ => {
             throw new RuntimeException("Unexpected node type")

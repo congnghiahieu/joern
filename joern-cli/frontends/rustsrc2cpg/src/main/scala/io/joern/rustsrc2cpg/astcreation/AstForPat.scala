@@ -65,13 +65,12 @@ trait AstForPat(implicit schemaValidationMode: ValidationMode) { this: AstCreato
       case Some(subpat) => astForPat(filename, parentFullname, subpat)
       case None         => Ast()
     }
+    val identAst = astForIdent(filename, parentFullname, identPatInstance.ident)
 
-    setCurrentPathCpgNodeType(PathCPGNodeType.IDENTIFIER_NODE)
-    val code      = codeForPatIdent(filename, parentFullname, identPatInstance)
-    val identNode = identifierNode(identPatInstance, identPatInstance.ident, identPatInstance.ident, "")
+    val code = codeForPatIdent(filename, parentFullname, identPatInstance)
 
     Ast(unknownNode(identPatInstance, code))
-      .withChild(Ast(identNode))
+      .withChild(identAst)
       .withChild(subpatAst)
       .withChildren(annotationsAst)
   }

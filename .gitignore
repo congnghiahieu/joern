@@ -78,5 +78,6 @@ flake.lock
 .bloop
 **/.DS_Store
 **/.bsp
+**/.scala-build
 
 out*

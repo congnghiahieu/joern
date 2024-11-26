@@ -52,12 +52,8 @@ class AstCreationPass(
   private val logger: Logger                      = LoggerFactory.getLogger(classOf[AstCreator])
 
   override def generateParts(): Array[Array[String]] = {
-
-    val cwd        = Paths.get(".").toAbsolutePath()
-    val binary     = cwd.resolve("bin/rust-parser/rust-parser")
-    val binaryPath = "/home/hieucien/Workspace/joern/joern-cli/frontends/rustsrc2cpg/bin/rust-parser/rust-parser"
     val command =
-      s"$binaryPath --input ${inputRootPath} --output ${outputDirPath.toString} --stdout --json --cargo-toml"
+      s"${config.rustParserPath} --input ${inputRootPath} --output ${outputDirPath.toString} --stdout --json --cargo-toml"
 
     runShellCommand(command) match {
       case Success(output) =>
@@ -74,13 +70,12 @@ class AstCreationPass(
           traverse.remove(0)
         }
 
-        // logger.info(s"[generateParts] [${inputRootPath.split("/").last}] collect.length: ${collect.length}")
+        // logger.warn(s"[generateParts] [${inputRootPath.split("/").last}] collect.length: ${collect.length}")
 
         val arr = collect.map(file => file.getAbsolutePath).toArray(classTag[String])
         Seq(arr).toArray
       case Failure(exception) =>
-        logger.info(s"ExternalCommand run failed: ${exception.getMessage}")
-        Array()
+        throw new RuntimeException("Rust parser run failed! Please check the your rust parser binary.")
     }
   }
 
@@ -137,9 +132,9 @@ class AstCreationPass(
       report.updateReport(filePathRelativeToCrate, gotCpg, duration)
     })
 
-    logger.info(s"[runOnPart] [${config.inputPath.split("/").last}] fileNames.length: ${resultFilePaths.length}")
-    logger.info(s"[runOnPart] [${config.inputPath.split("/").last}] cargoFileNumber: ${cargoFileNumber}")
-    logger.info(s"[runOnPart] [${config.inputPath.split("/").last}] rustFileNumber: ${rustFileNumber}")
+    logger.warn(s"[runOnPart] [${config.inputPath.split("/").last}] fileNames.length: ${resultFilePaths.length}")
+    logger.warn(s"[runOnPart] [${config.inputPath.split("/").last}] cargoFileNumber: ${cargoFileNumber}")
+    logger.warn(s"[runOnPart] [${config.inputPath.split("/").last}] rustFileNumber: ${rustFileNumber}")
   }
 
   def getUsedPrimitiveTypes() = usedPrimitiveTypes

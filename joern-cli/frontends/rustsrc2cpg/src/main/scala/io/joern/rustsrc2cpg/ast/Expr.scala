@@ -250,6 +250,12 @@ class ExprRepeat extends BaseExpr {
 
 class ExprReturn extends BaseExpr {
   var expr: Option[Expr] = None
+
+  @JsonCreator
+  def this(@JsonProperty("expr") expr: Option[Expr]) = {
+    this()
+    this.expr = expr
+  }
 }
 
 class ExprStruct extends BaseExpr {

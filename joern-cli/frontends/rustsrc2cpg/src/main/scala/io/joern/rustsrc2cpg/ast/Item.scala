@@ -129,7 +129,7 @@ class ItemStruct extends BaseItem {
 class ItemTrait extends BaseItem {
   var vis: Option[Visibility]                 = None
   var unsafe: Option[Boolean]                 = None
-  var auto_token: Option[Boolean]             = None
+  var auto: Option[Boolean]                   = None
   var restriction: Option[ImplRestriction]    = None
   var ident: Ident                            = ""
   var generics: Option[Generics]              = None

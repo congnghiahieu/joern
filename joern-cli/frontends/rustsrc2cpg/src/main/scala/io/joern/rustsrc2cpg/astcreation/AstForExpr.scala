@@ -139,6 +139,7 @@ trait AstForExpr(implicit schemaValidationMode: ValidationMode) { this: AstCreat
       case Some(right) => astForExpr(filename, parentFullname, right)
       case None        => Ast()
     }
+
     val code = codeForExprAssign(filename, parentFullname, assignExprInstance)
     val node = newOperatorCallNode(Operators.assignment, code)
 
@@ -199,10 +200,7 @@ trait AstForExpr(implicit schemaValidationMode: ValidationMode) { this: AstCreat
       case Some(right) => astForExpr(filename, parentFullname, right)
       case None        => Ast()
     }
-    // val opAst = binaryExprInstance.op match {
-    //   case Some(op) => astForBinOp(filename, parentFullname, op)
-    //   case None     => Ast()
-    // }
+
     val code      = codeForExprBinary(filename, parentFullname, binaryExprInstance)
     val operator  = BinOp.binOpToOperator(binaryExprInstance.op.get)
     val binaryAst = newOperatorCallNode(operator, code)
@@ -756,12 +754,8 @@ trait AstForExpr(implicit schemaValidationMode: ValidationMode) { this: AstCreat
       case Some(end) => astForExpr(filename, parentFullname, end)
       case None      => Ast()
     }
-    // val limitAst = rangeExprInstance.limits match {
-    //   case Some(limit) => astForRangeLimits(filename, parentFullname, limit)
-    //   case None        => Ast()
-    // }
-    val code = codeForExprRange(filename, parentFullname, rangeExprInstance)
 
+    val code          = codeForExprRange(filename, parentFullname, rangeExprInstance)
     val exprRangeNode = newOperatorCallNode(Operators.range, code)
 
     callAst(exprRangeNode, Seq(startAst, endAst))
@@ -773,11 +767,11 @@ trait AstForExpr(implicit schemaValidationMode: ValidationMode) { this: AstCreat
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
     }
-
     val exprAst = referenceExprInstance.expr match {
       case Some(expr) => astForExpr(filename, parentFullname, expr)
       case None       => Ast()
     }
+
     val code = codeForExprReference(filename, parentFullname, referenceExprInstance)
     val node = newOperatorCallNode(Operators.addressOf, code)
 

@@ -71,12 +71,12 @@ trait AstForWherePredicate(implicit schemaValidationMode: ValidationMode) { this
             case _                     => throw new RuntimeException("Expected lifetime node")
           }
           diffGraph.addEdge(wrapper, dst, EdgeTypes.AST)
-          diffGraph.addEdge(wrapper, dst, EdgeTypes.OUT_LIVE)
-          diffGraph.addEdge(wrapper, dst, EdgeTypes.CONDITION)
-          diffGraph.addEdge(wrapper, dst, EdgeTypes.IMPORTS)
-          diffGraph.addEdge(wrapper, dst, EdgeTypes.REF)
-          diffGraph.addEdge(wrapper, dst, EdgeTypes.BINDS)
-          diffGraph.addEdge(wrapper, dst, EdgeTypes.BINDS_TO)
+          // diffGraph.addEdge(wrapper, dst, EdgeTypes.OUT_LIVE)
+          // diffGraph.addEdge(wrapper, dst, EdgeTypes.CONDITION)
+          // diffGraph.addEdge(wrapper, dst, EdgeTypes.IMPORTS)
+          // diffGraph.addEdge(wrapper, dst, EdgeTypes.REF)
+          // diffGraph.addEdge(wrapper, dst, EdgeTypes.BINDS)
+          // diffGraph.addEdge(wrapper, dst, EdgeTypes.BINDS_TO)
         })
 
         Ast(wrapper)
