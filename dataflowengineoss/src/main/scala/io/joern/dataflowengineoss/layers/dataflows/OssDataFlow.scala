@@ -21,6 +21,6 @@ class OssDataFlow(opts: OssDataFlowOptions)(implicit val semantics: Semantics = 
   override val description: String = OssDataFlow.description
 
   override def create(context: LayerCreatorContext): Unit = {
-    ReachingDefPass(context.cpg, opts.maxNumberOfDefinitions).createAndApply()
+    // ReachingDefPass(context.cpg, opts.maxNumberOfDefinitions).createAndApply()
   }
 }
