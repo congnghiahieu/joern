@@ -110,8 +110,22 @@ trait AstForType(implicit schemaValidationMode: ValidationMode) { this: AstCreat
 
   def astForTypeReference(filename: String, parentFullname: String, typeReferenceInstance: TypeReference): Ast = {
     val typeFullname = typeFullnameForTypeReference(filename, parentFullname, typeReferenceInstance)
-    val node         = typeRefNode(typeReferenceInstance, typeFullname, typeFullname)
-    Ast(node)
+    val wrapper      = unknownNode(typeReferenceInstance, typeFullname)
+    val lifetime = typeReferenceInstance.lifetime match {
+      case Some(lifetime) => astForLifetime(filename, parentFullname, lifetime)._1
+      case None           => Ast()
+    }
+    val elem = typeReferenceInstance.elem match {
+      case Some(elem) => astForType(filename, parentFullname, elem)
+      case None       => Ast()
+    }
+
+    Ast(wrapper)
+      .withChild(lifetime)
+      .withChild(elem)
+
+    // val node         = typeRefNode(typeReferenceInstance, typeFullname, typeFullname)
+    // Ast(node)
   }
 
   def astForTypeSlice(filename: String, parentFullname: String, typeSliceInstance: TypeSlice): Ast = {

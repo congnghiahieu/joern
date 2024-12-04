@@ -136,7 +136,7 @@ trait AstForFnArg(implicit schemaValidationMode: ValidationMode) { this: AstCrea
     val node = typeRefNode(bareFnArgInstance, code, code)
 
     Ast(node)
-      .withChildren(annotationsAst)
+    // .withChildren(annotationsAst)
   }
 
   def codeForBareFnArg(filename: String, parentFullname: String, bareFnArgInstance: BareFnArg): String = {

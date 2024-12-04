@@ -51,10 +51,12 @@ trait AstForMeta(implicit schemaValidationMode: ValidationMode) { this: AstCreat
         val nodeAst = scope.lookupVariable(fullname) match {
           case Some((newNode, _)) => {
             newNode match {
-              case typeNode: NewType         => Ast(node).withRefEdge(node, typeNode)
-              case typeDeclNode: NewTypeDecl => Ast(node).withRefEdge(node, typeDeclNode)
-              case typeParamNode: NewTypeParameter =>
-                Ast(node).withRefEdge(node, typeParamNode)
+              case typeNode: NewType => Ast(node)
+              // .withRefEdge(node, typeNode)
+              case typeDeclNode: NewTypeDecl => Ast(node)
+              // .withRefEdge(node, typeDeclNode)
+              case typeParamNode: NewTypeParameter => Ast(node)
+              // .withRefEdge(node, typeParamNode)
               case _ => Ast(node)
             }
           }
