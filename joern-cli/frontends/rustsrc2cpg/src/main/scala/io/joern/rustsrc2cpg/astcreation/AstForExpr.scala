@@ -575,17 +575,8 @@ trait AstForExpr(implicit schemaValidationMode: ValidationMode) { this: AstCreat
 
   def astForExprLet(filename: String, parentFullname: String, letExprInstance: ExprLet): Ast = {
     val (lhsCode, typeFullname) = letExprInstance.pat match {
-      case Some(pat) =>
-        val parts = codeForPat(filename, parentFullname, pat).split(":")
-        parts.length match {
-          case 1 =>
-            (parts(0), "_")
-          case 2 =>
-            (parts(0), parts(1))
-          case _ =>
-            throw new RuntimeException(s"Unexpected pattern parts: ${parts.mkString(": ")}")
-        }
-      case None => (Defines.Unknown, Defines.Unknown)
+      case Some(pat) => extractCodeForPatType(codeForPat(filename, parentFullname, pat))
+      case None      => (Defines.Unknown, Defines.Unknown)
     }
     // remove subPat, mut and ref (see class PatIdent)
     val identOnly = lhsCode.split("@").head.replace("mut", "").replace("ref", "").trim

@@ -365,6 +365,18 @@ trait CodeForPat(implicit schemaValidationMode: ValidationMode) { this: AstCreat
     }
     s"$patCode: $typeCode"
   }
+  def extractCodeForPatType(patTypeCode: String): (String, String) = {
+    val parts = patTypeCode.split(":")
+    patTypeCode.length match {
+      case 0 =>
+        throw new RuntimeException(s"Unexpected pattern parts: ${parts.mkString(": ")}")
+      case 1 =>
+        (parts(0), "_")
+      case n if n >= 2 =>
+        (parts(0), parts.slice(1, n).mkString(":"))
+    }
+  }
+
   def codeForPatWild(filename: String, parentFullname: String, wildPatInstance: PatWild): String = {
     "_"
   }

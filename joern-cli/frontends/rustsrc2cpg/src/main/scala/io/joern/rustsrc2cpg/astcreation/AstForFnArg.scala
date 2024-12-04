@@ -33,18 +33,8 @@ trait AstForFnArg(implicit schemaValidationMode: ValidationMode) { this: AstCrea
     patTypeInstance: PatType,
     parameterIndex: Int
   ): Ast = {
-    val code = codeForPatType(filename, parentFullname, patTypeInstance)
-    val (lhsCode, typeFullname) = {
-      val parts = code.split(":")
-      parts.length match {
-        case 1 =>
-          (parts(0), "_")
-        case 2 =>
-          (parts(0), parts(1))
-        case _ =>
-          throw new RuntimeException(s"Unexpected pattern parts: ${parts.mkString(": ")}")
-      }
-    }
+    val code                    = codeForPatType(filename, parentFullname, patTypeInstance)
+    val (lhsCode, typeFullname) = extractCodeForPatType(code)
     // remove subPat, mut and ref (see class PatIdent)
     val identOnly = lhsCode.split("@").head.replace("mut", "").replace("ref", "").trim
     val evaluationStrategy = typeFullname.contains("&") match {
