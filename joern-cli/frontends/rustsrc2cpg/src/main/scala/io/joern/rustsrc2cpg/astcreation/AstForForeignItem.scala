@@ -36,7 +36,8 @@ trait AstForForeignItem(implicit schemaValidationMode: ValidationMode) {
 
   def astForForeignItemFn(filename: String, parentFullname: String, fnForeignItemInstance: ForeignItemFn): Ast = {
     val newMethodNode =
-      methodNode(fnForeignItemInstance, fnForeignItemInstance.ident, "", "", filename).isExternal(true)
+      methodNode(fnForeignItemInstance, fnForeignItemInstance.ident, fnForeignItemInstance.ident, "", filename)
+        .isExternal(true)
     scope.addToScope(fnForeignItemInstance.ident, (newMethodNode, fnForeignItemInstance.ident))
 
     scope.pushNewScope(newMethodNode)

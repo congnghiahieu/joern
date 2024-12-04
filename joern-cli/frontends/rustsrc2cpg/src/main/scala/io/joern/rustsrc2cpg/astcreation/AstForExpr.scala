@@ -313,7 +313,17 @@ trait AstForExpr(implicit schemaValidationMode: ValidationMode) { this: AstCreat
 
   def astForExprClosure(filename: String, parentFullname: String, closureExprInstance: ExprClosure): Ast = {
     val closureFunctionName = nextClosureName()
-    val closureNode         = methodNode(closureExprInstance, closureFunctionName, closureFunctionName, "", filename)
+    val closureNode =
+      methodNode(
+        closureExprInstance,
+        closureFunctionName,
+        "",
+        closureFunctionName,
+        None,
+        filename,
+        Some(NodeTypes.METHOD),
+        None
+      )
 
     scope.pushNewScope(closureNode)
 
@@ -363,8 +373,16 @@ trait AstForExpr(implicit schemaValidationMode: ValidationMode) { this: AstCreat
       .withChildren(lifetimeAst)
     Ast.storeInDiffGraph(methodAst, diffGraph)
 
+    // Create type decl
+    val closureTypeDecl =
+      typeDeclNode(closureExprInstance, closureFunctionName, closureFunctionName, filename, "")
+    closureTypeDecl.astParentFullName("").astParentType(NodeTypes.METHOD)
+    Ast.storeInDiffGraph(Ast(closureTypeDecl), diffGraph)
+
+    // Create method ref
     val node = methodRefNode(closureExprInstance, "", closureFunctionName, closureFunctionName)
-    Ast(node).withRefEdge(node, closureNode)
+    Ast(node)
+      .withRefEdge(node, closureNode)
   }
 
   def astForExprConst(filename: String, parentFullname: String, constExprInstance: ExprConst): Ast = {

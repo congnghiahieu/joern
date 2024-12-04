@@ -75,7 +75,7 @@ trait AstForImplItem(implicit schemaValidationMode: ValidationMode) { this: AstC
   }
 
   def astForImplItemFn(filename: String, parentFullname: String, fnImplItemInstance: ImplItemFn): Ast = {
-    val newMethodNode = methodNode(fnImplItemInstance, fnImplItemInstance.ident, "", "", filename)
+    val newMethodNode = methodNode(fnImplItemInstance, fnImplItemInstance.ident, fnImplItemInstance.ident, "", filename)
     scope.addToScope(fnImplItemInstance.ident, (newMethodNode, fnImplItemInstance.ident))
 
     scope.pushNewScope(newMethodNode)
