@@ -14,6 +14,9 @@ case $1 in
 "rust")
   INPUT_DIR=$ROOT_DIR/rust/tests/rust/
   ;;
+"rustdownload")
+  INPUT_DIR=$ROOT_DIR/rust/tests/rustdownload/
+  ;;
 "go")
   INPUT_DIR=$ROOT_DIR/rust/tests/go/
   ;;
@@ -36,7 +39,7 @@ esac
 
 rm -rf $OUTPUT_DIR
 
-$ROOT_DIR/joern-parse --output $CPG_PATH $INPUT_DIR
+$ROOT_DIR/joern-parse -J-Xmx25G --output $CPG_PATH $INPUT_DIR
 
 $ROOT_DIR/joern-export --repr=all --format=neo4jcsv --out=$OUTPUT_DIR $CPG_PATH
 
