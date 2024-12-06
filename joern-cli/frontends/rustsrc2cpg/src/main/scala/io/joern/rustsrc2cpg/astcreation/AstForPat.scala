@@ -7,13 +7,14 @@ import io.joern.x2cpg.AstNodeBuilder
 import io.joern.x2cpg.Defines
 import io.joern.x2cpg.ValidationMode
 import io.joern.x2cpg.utils.NodeBuilders.newModifierNode
+import io.joern.x2cpg.utils.NodeBuilders.newOperatorCallNode
 import io.shiftleft.codepropertygraph.generated.EvaluationStrategies
 import io.shiftleft.codepropertygraph.generated.ModifierTypes
+import io.shiftleft.codepropertygraph.generated.Operators
 import io.shiftleft.codepropertygraph.generated.nodes.*
 
 import scala.collection.mutable.ListBuffer
-import io.joern.x2cpg.utils.NodeBuilders.newOperatorCallNode
-import io.shiftleft.codepropertygraph.generated.Operators
+import scala.util.matching.Regex
 
 trait AstForPat(implicit schemaValidationMode: ValidationMode) { this: AstCreator =>
   def astForPat(filename: String, parentFullname: String, patInstance: Pat): Ast = {
@@ -57,6 +58,10 @@ trait AstForPat(implicit schemaValidationMode: ValidationMode) { this: AstCreato
   }
 
   def astForPatIdent(filename: String, parentFullname: String, identPatInstance: PatIdent): Ast = {
+    val code    = codeForPatIdent(filename, parentFullname, identPatInstance)
+    val letNode = localNode(identPatInstance, identPatInstance.ident, code, "")
+    scope.addToScope(identPatInstance.ident, (letNode, code))
+
     val annotationsAst = identPatInstance.attrs match {
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
@@ -65,12 +70,11 @@ trait AstForPat(implicit schemaValidationMode: ValidationMode) { this: AstCreato
       case Some(subpat) => astForPat(filename, parentFullname, subpat)
       case None         => Ast()
     }
-    val identAst = astForIdent(filename, parentFullname, identPatInstance.ident)
-
-    val code = codeForPatIdent(filename, parentFullname, identPatInstance)
+    // val identAst = astForIdent(filename, parentFullname, identPatInstance.ident)
 
     Ast(unknownNode(identPatInstance, code))
-      .withChild(identAst)
+      // .withChild(identAst)
+      .withChild(Ast(letNode))
       .withChild(subpatAst)
       .withChildren(annotationsAst)
   }
@@ -365,9 +369,9 @@ trait CodeForPat(implicit schemaValidationMode: ValidationMode) { this: AstCreat
     }
     s"$patCode: $typeCode"
   }
-  def extractCodeForPatType(patTypeCode: String): (String, String) = {
+  def extractCodeForPatType(patTypeCode: String): (String, String, String) = {
     val parts = patTypeCode.split(":")
-    patTypeCode.length match {
+    val (lhsCode, typeFullname) = patTypeCode.length match {
       case 0 =>
         throw new RuntimeException(s"Unexpected pattern parts: ${parts.mkString(": ")}")
       case 1 =>
@@ -375,6 +379,18 @@ trait CodeForPat(implicit schemaValidationMode: ValidationMode) { this: AstCreat
       case n if n >= 2 =>
         (parts(0), parts.slice(1, n).mkString(":"))
     }
+
+    var identOnly = lhsCode.split("@").head.replace("mut", "").replace("ref", "").trim
+
+    val somePattern: Regex = "Some\\((.+)\\)".r
+    identOnly match {
+      case somePattern(ident) => {
+        identOnly = ident
+      }
+      case _ =>
+    }
+
+    (lhsCode, typeFullname, identOnly)
   }
 
   def codeForPatWild(filename: String, parentFullname: String, wildPatInstance: PatWild): String = {

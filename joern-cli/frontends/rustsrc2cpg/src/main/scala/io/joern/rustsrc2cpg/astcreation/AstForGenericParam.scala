@@ -6,11 +6,12 @@ import io.joern.x2cpg.AstCreatorBase
 import io.joern.x2cpg.AstNodeBuilder
 import io.joern.x2cpg.Defines
 import io.joern.x2cpg.ValidationMode
-import io.joern.x2cpg.utils.NodeBuilders
 import io.joern.x2cpg.utils.NodeBuilders.newModifierNode
+import io.shiftleft.codepropertygraph.generated.EdgeTypes
 import io.shiftleft.codepropertygraph.generated.EvaluationStrategies
 import io.shiftleft.codepropertygraph.generated.ModifierTypes
 import io.shiftleft.codepropertygraph.generated.nodes.*
+
 import scala.collection.mutable.ListBuffer
 
 trait AstForGenericParam(implicit schemaValidationMode: ValidationMode) { this: AstCreator =>
@@ -38,23 +39,29 @@ trait AstForGenericParam(implicit schemaValidationMode: ValidationMode) { this: 
       .name(lifetimeCode)
       .code(lifetimeCode)
     val code = codeForLifetimeGenericParam(filename, parentFullname, lifetimeParamInstance)
-    scope.addToScope(code, (lifetimeParamNode, code))
+    scope.addToScope(lifetimeCode, (lifetimeParamNode, code))
 
     val annotationsAst = lifetimeParamInstance.attrs match {
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
       case None        => List()
     }
-    val boundsAst = lifetimeParamInstance.bounds.nonEmpty match {
+    val boundsWrapper = lifetimeParamInstance.bounds.nonEmpty match {
       case true =>
         val bounds  = lifetimeParamInstance.bounds.map(astForLifetime(filename, parentFullname, _)).toList
-        val wrapper = Ast(unknownNode(BoundAst(), boundsCode))
-        wrapper.withChildren(bounds)
+        val wrapper = unknownNode(BoundAst(), boundsCode)
+
+        bounds.foreach((ast, node) => {
+          diffGraph.addEdge(wrapper, node, EdgeTypes.AST)
+          diffGraph.addEdge(lifetimeParamNode, node, EdgeTypes.OUT_LIVE)
+        })
+
+        Ast(wrapper)
       case false => Ast()
     }
 
     Ast(unknownNode(lifetimeParamInstance, code))
       .withChild(Ast(lifetimeParamNode))
-      .withChild(boundsAst)
+      .withChild(boundsWrapper)
       .withChildren(annotationsAst)
   }
 

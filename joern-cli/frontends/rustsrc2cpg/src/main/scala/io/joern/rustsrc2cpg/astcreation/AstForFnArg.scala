@@ -33,16 +33,16 @@ trait AstForFnArg(implicit schemaValidationMode: ValidationMode) { this: AstCrea
     patTypeInstance: PatType,
     parameterIndex: Int
   ): Ast = {
-    val code                    = codeForPatType(filename, parentFullname, patTypeInstance)
-    val (lhsCode, typeFullname) = extractCodeForPatType(code)
-    // remove subPat, mut and ref (see class PatIdent)
-    val identOnly = lhsCode.split("@").head.replace("mut", "").replace("ref", "").trim
+    val code                               = codeForPatType(filename, parentFullname, patTypeInstance)
+    val (lhsCode, typeFullname, identOnly) = extractCodeForPatType(code)
+
+    // val letNode = localNode(patTypeInstance, identOnly, code, typeFullname)
+    // scope.addToScope(identOnly, (letNode, code))
+
     val evaluationStrategy = typeFullname.contains("&") match {
       case true  => EvaluationStrategies.BY_REFERENCE
       case false => EvaluationStrategies.BY_VALUE
     }
-    val letNode = localNode(patTypeInstance, identOnly, code, typeFullname)
-    scope.addToScope(identOnly, (letNode, code))
 
     val annotationsAst = patTypeInstance.attrs match {
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
@@ -59,10 +59,11 @@ trait AstForFnArg(implicit schemaValidationMode: ValidationMode) { this: AstCrea
 
     val parameterNode =
       parameterInNode(patTypeInstance, identOnly, code, parameterIndex, false, evaluationStrategy, typeFullname)
+    scope.addToScope(identOnly, (parameterNode, code))
 
     Ast(parameterNode)
-      .withChild(Ast(letNode))
-      .withChild(patAst)
+      // .withChild(Ast(letNode))
+      // .withChild(patAst)
       .withChild(typeAst)
       .withChildren(annotationsAst)
   }
@@ -105,17 +106,9 @@ trait AstForFnArg(implicit schemaValidationMode: ValidationMode) { this: AstCrea
     }
     val lifetimeAst = receiverInstance.lifetime match {
       case Some(lifetime) => {
-        val ast = astForLifetime(filename, parentFullname, lifetime)
-        ast.root.get match {
-          case lifetimeNode: NewLifetime => {
-            diffGraph.addEdge(parameterNode, lifetimeNode, EdgeTypes.AST)
-            // diffGraph.addEdge(parameterNode, lifetimeNode, EdgeTypes.OUT_LIVE)
-            // diffGraph.addEdge(parameterNode, lifetimeNode, EdgeTypes.REF)
-          }
-          case _ => {
-            throw new RuntimeException("Unexpected node type")
-          }
-        }
+        val (ast, node) = astForLifetime(filename, parentFullname, lifetime)
+        diffGraph.addEdge(parameterNode, node, EdgeTypes.AST)
+        diffGraph.addEdge(parameterNode, node, EdgeTypes.OUT_LIVE)
         ast
       }
       case None => Ast()

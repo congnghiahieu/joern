@@ -31,15 +31,73 @@ trait AstForMeta(implicit schemaValidationMode: ValidationMode) { this: AstCreat
   }
   def astForPath(filename: String, parentFullname: String, pathInstance: Path, qself: Option[QSelf] = None): Ast = {
     val (fullname, _, code) = codeForPath(filename, parentFullname, pathInstance, qself)
+    val wrapper             = unknownNode(WrapperAst(), code)
+    val segmentsAst         = pathInstance.segments.map(astForPathSegment(filename, parentFullname, _)).toList
+    segmentsAst.length match {
+      case 1 => segmentsAst.head
+      case _ => Ast(wrapper).withChildren(segmentsAst)
+    }
 
-    getCurrentPathCpgNodeType match {
+    // val (fullname, _, code) = codeForPath(filename, parentFullname, pathInstance, qself)
+
+    // getCurrentPathCpgNodeType match {
+    //   case PathCPGNodeType.IDENTIFIER_NODE => {
+    //     val node = identifierNode(pathInstance, fullname, fullname, "")
+    //     val nodeAst = scope.lookupVariable(fullname) match {
+    //       case Some((newNode, _)) => {
+    //         newNode match {
+    //           case localNode: NewLocal => Ast(node).withRefEdge(node, localNode)
+    //           case _                   => Ast(node)
+    //         }
+    //       }
+    //       case None => Ast(node)
+    //     }
+    //     nodeAst
+    //   }
+    //   case PathCPGNodeType.TYPEREF_NODE => {
+    //     val node = typeRefNode(pathInstance, fullname, fullname)
+    //     val nodeAst = scope.lookupVariable(fullname) match {
+    //       case Some((newNode, _)) => {
+    //         newNode match {
+    //           case typeNode: NewType => Ast(node)
+    //           // .withRefEdge(node, typeNode)
+    //           case typeDeclNode: NewTypeDecl => Ast(node)
+    //           // .withRefEdge(node, typeDeclNode)
+    //           case typeParamNode: NewTypeParameter => Ast(node)
+    //           // .withRefEdge(node, typeParamNode)
+    //           case _ => Ast(node)
+    //         }
+    //       }
+    //       case None => Ast(node)
+    //     }
+    //     nodeAst
+    //   }
+    //   case PathCPGNodeType.METHODREF_NODE => {
+    //     val node = methodRefNode(pathInstance, fullname, fullname, "")
+    //     val nodeAst = scope.lookupVariable(fullname) match {
+    //       case Some((newNode, _)) => {
+    //         newNode match {
+    //           case methodNode: NewMethod => Ast(node).withRefEdge(node, methodNode)
+    //           case _                     => Ast(node)
+    //         }
+    //       }
+    //       case None => Ast(node)
+    //     }
+    //     nodeAst
+    //   }
+    // }
+  }
+
+  def astForPathSegment(filename: String, parentFullname: String, pathSegmentInstance: PathSegment): Ast = {
+    val identAst = getCurrentPathCpgNodeType match {
       case PathCPGNodeType.IDENTIFIER_NODE => {
-        val node = identifierNode(pathInstance, fullname, fullname, "")
-        val nodeAst = scope.lookupVariable(fullname) match {
+        val node = identifierNode(pathSegmentInstance, pathSegmentInstance.ident, pathSegmentInstance.ident, "")
+        val nodeAst = scope.lookupVariable(pathSegmentInstance.ident) match {
           case Some((newNode, _)) => {
             newNode match {
-              case localNode: NewLocal => Ast(node).withRefEdge(node, localNode)
-              case _                   => Ast(node)
+              case localNode: NewLocal                     => Ast(node).withRefEdge(node, localNode)
+              case methodParamInNode: NewMethodParameterIn => Ast(node).withRefEdge(node, methodParamInNode)
+              case _                                       => Ast(node)
             }
           }
           case None => Ast(node)
@@ -47,17 +105,14 @@ trait AstForMeta(implicit schemaValidationMode: ValidationMode) { this: AstCreat
         nodeAst
       }
       case PathCPGNodeType.TYPEREF_NODE => {
-        val node = typeRefNode(pathInstance, fullname, fullname)
-        val nodeAst = scope.lookupVariable(fullname) match {
+        val node = typeRefNode(pathSegmentInstance, pathSegmentInstance.ident, pathSegmentInstance.ident)
+        val nodeAst = scope.lookupVariable(pathSegmentInstance.ident) match {
           case Some((newNode, _)) => {
             newNode match {
-              case typeNode: NewType => Ast(node)
-              // .withRefEdge(node, typeNode)
-              case typeDeclNode: NewTypeDecl => Ast(node)
-              // .withRefEdge(node, typeDeclNode)
-              case typeParamNode: NewTypeParameter => Ast(node)
-              // .withRefEdge(node, typeParamNode)
-              case _ => Ast(node)
+              case typeNode: NewType               => Ast(node).withRefEdge(node, typeNode)
+              case typeDeclNode: NewTypeDecl       => Ast(node).withRefEdge(node, typeDeclNode)
+              case typeParamNode: NewTypeParameter => Ast(node).withRefEdge(node, typeParamNode)
+              case _                               => Ast(node)
             }
           }
           case None => Ast(node)
@@ -65,8 +120,8 @@ trait AstForMeta(implicit schemaValidationMode: ValidationMode) { this: AstCreat
         nodeAst
       }
       case PathCPGNodeType.METHODREF_NODE => {
-        val node = methodRefNode(pathInstance, fullname, fullname, "")
-        val nodeAst = scope.lookupVariable(fullname) match {
+        val node = methodRefNode(pathSegmentInstance, pathSegmentInstance.ident, pathSegmentInstance.ident, "")
+        val nodeAst = scope.lookupVariable(pathSegmentInstance.ident) match {
           case Some((newNode, _)) => {
             newNode match {
               case methodNode: NewMethod => Ast(node).withRefEdge(node, methodNode)
@@ -78,6 +133,16 @@ trait AstForMeta(implicit schemaValidationMode: ValidationMode) { this: AstCreat
         nodeAst
       }
     }
+
+    val ast = pathSegmentInstance.arguments match {
+      case Some(arguments) => {
+        val args = astForPathArguments(filename, parentFullname, arguments)
+        identAst.withChild(args)
+      }
+      case None => identAst
+    }
+
+    ast
   }
 
   def astForMetaList(filename: String, parentFullname: String, metaListInstance: MetaList): Ast = {

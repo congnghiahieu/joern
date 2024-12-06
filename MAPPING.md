@@ -612,3 +612,11 @@ EdgeTypes.SOURCE_FILE
 
 11. Không sử dụng TYPE_REF mà sử dụng TYPE, khai báo riêng (Mỗi lần typeRef là tạo Type, và link đến)
 12. Tạo thêm cạnh member, cạnh outlife, lifetime để chỉ có ra ý nghĩa của lifetime
+
+# OUT_LIVE
+
+- METHOD PARAMETER IN OUTLIVE LIFETIME
+- LIFETIME / LIFETIME PARAMETER OUTLIVE FUNCTION
+- RETURN TYPE OUTLIFE LIFETIME
+- LIFETIME PARAMETER OUTLIVE LIFETIME
+- LIFETIME REF LIFETIME PARAMETER

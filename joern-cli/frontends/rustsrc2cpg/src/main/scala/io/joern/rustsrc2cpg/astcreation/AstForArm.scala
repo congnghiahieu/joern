@@ -45,8 +45,9 @@ trait AstForArm(implicit schemaValidationMode: ValidationMode) { this: AstCreato
       case Some(guard) => s"$condCode @ ${codeForExpr(filename, armNode.parserTypeName, guard)}"
       case None        => ""
     }
-    val conditionAst = Ast(unknownNode(WrapperAst(), condCode))
-      .withChildren(List(patAst, guardAst))
+    // val conditionAst = Ast(unknownNode(WrapperAst(), condCode))
+    //   .withChildren(List(patAst, guardAst))
+    val conditionAst = patAst
 
     val bodyAst = arm.body match {
       case Some(body) => astForExpr(filename, armNode.parserTypeName, body)

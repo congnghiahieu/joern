@@ -74,15 +74,14 @@ trait AstForStmt(implicit schemaValidationMode: ValidationMode) { this: AstCreat
       case None      => Ast()
     }
 
-    val (lhsCode, typeFullname) = localInstance.pat match {
+    val (lhsCode, typeFullname, identOnly) = localInstance.pat match {
       case Some(pat) => extractCodeForPatType(codeForPat(filename, parentFullname, pat))
-      case None      => (Defines.Unknown, Defines.Unknown)
+      case None      => (Defines.Unknown, Defines.Unknown, Defines.Unknown)
     }
-    // remove subPat, mut and ref (see class PatIdent)
-    val identOnly = lhsCode.split("@").head.replace("mut", "").replace("ref", "").trim
     val localCode = s"let $lhsCode"
-    val letNode   = localNode(localInstance, identOnly, localCode, typeFullname)
-    scope.addToScope(identOnly, (letNode, localCode))
+
+    // val letNode   = localNode(localInstance, identOnly, localCode, typeFullname)
+    // scope.addToScope(identOnly, (letNode, localCode))
 
     val fullCode = localInstance.init match {
       case Some(init) =>
@@ -94,7 +93,7 @@ trait AstForStmt(implicit schemaValidationMode: ValidationMode) { this: AstCreat
     val assignmentNode = newOperatorCallNode(Operators.assignment, fullCode)
 
     callAst(assignmentNode, Seq(patAst, localInitAst))
-      .withChild(Ast(letNode))
+      // .withChild(Ast(letNode))
       .withChildren(annotationsAst)
   }
 
@@ -127,6 +126,7 @@ trait CodeForStmt(implicit schemaValidationMode: ValidationMode) { this: AstCrea
 
   def codeForBlock(filename: String, parentFullname: String, blockInstance: Block): String = {
     val stmtsCode = blockInstance.map(codeForStmt(filename, parentFullname, _)).mkString("\n")
+
     s"""{
     $stmtsCode
     }

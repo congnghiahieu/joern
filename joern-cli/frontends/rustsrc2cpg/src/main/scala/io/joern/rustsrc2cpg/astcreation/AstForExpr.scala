@@ -574,15 +574,13 @@ trait AstForExpr(implicit schemaValidationMode: ValidationMode) { this: AstCreat
   }
 
   def astForExprLet(filename: String, parentFullname: String, letExprInstance: ExprLet): Ast = {
-    val (lhsCode, typeFullname) = letExprInstance.pat match {
-      case Some(pat) => extractCodeForPatType(codeForPat(filename, parentFullname, pat))
-      case None      => (Defines.Unknown, Defines.Unknown)
-    }
-    // remove subPat, mut and ref (see class PatIdent)
-    val identOnly = lhsCode.split("@").head.replace("mut", "").replace("ref", "").trim
-    val localCode = s"let $lhsCode"
-    val letNode   = localNode(letExprInstance, identOnly, localCode, typeFullname)
-    scope.addToScope(identOnly, (letNode, localCode))
+    // val (lhsCode, typeFullname, identOnly) = letExprInstance.pat match {
+    //   case Some(pat) => extractCodeForPatType(codeForPat(filename, parentFullname, pat))
+    //   case None      => (Defines.Unknown, Defines.Unknown, Defines.Unknown)
+    // }
+    // val localCode = s"let $lhsCode"
+    // val letNode   = localNode(letExprInstance, identOnly, localCode, typeFullname)
+    // scope.addToScope(identOnly, (letNode, localCode))
 
     val annotationsAst = letExprInstance.attrs match {
       case Some(attrs) => attrs.map(astForAttribute(filename, parentFullname, _)).toList
@@ -602,7 +600,7 @@ trait AstForExpr(implicit schemaValidationMode: ValidationMode) { this: AstCreat
     val assignmentNode = newOperatorCallNode(Operators.assignment, fullCode)
 
     callAst(assignmentNode, Seq(patAst, exprAst))
-      .withChild(Ast(letNode))
+      // .withChild(Ast(letNode))
       .withChildren(annotationsAst)
   }
 
@@ -984,10 +982,12 @@ trait AstForExpr(implicit schemaValidationMode: ValidationMode) { this: AstCreat
 
     scope.popScope()
 
-    val code = "while"
-    whileAst(Some(condAst), Seq(bodyAst), Some(code))
+    val code = "while {}"
+    val ast = whileAst(Some(condAst), Seq(bodyAst), Some(code))
       .withChild(labelAst)
       .withChildren(annotationsAst)
+    ast.root.get.asInstanceOf[NewControlStructure].parserTypeName(classOf[ExprWhile].getSimpleName)
+    ast
   }
 
   def astForExprYield(filename: String, parentFullname: String, yieldExprInstance: ExprYield): Ast = {

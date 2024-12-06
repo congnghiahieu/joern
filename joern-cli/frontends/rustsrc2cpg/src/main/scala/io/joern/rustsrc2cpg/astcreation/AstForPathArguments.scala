@@ -46,12 +46,12 @@ trait AstForPathArguments(implicit schemaValidationMode: ValidationMode) { this:
     parentFullname: String,
     angleBracketedInstance: AngleBracketedGenericArguments
   ): Ast = {
-    val code    = codeForAngleBracketedGenericArguments(filename, parentFullname, angleBracketedInstance)
-    val node    = NewTypeArgument().code(code)
+    val code = codeForAngleBracketedGenericArguments(filename, parentFullname, angleBracketedInstance)
+    // val node    = NewTypeArgument().code(code)
     val argsAst = angleBracketedInstance.args.map(astForGenericArgument(filename, parentFullname, _))
 
     Ast(unknownNode(angleBracketedInstance, code))
-      .withChild(Ast(node))
+      // .withChild(Ast(node))
       .withChildren(argsAst)
   }
 
@@ -60,8 +60,8 @@ trait AstForPathArguments(implicit schemaValidationMode: ValidationMode) { this:
     parentFullname: String,
     parenthesizedInstance: ParenthesizedGenericArguments
   ): Ast = {
-    val code      = codeForParenthesizedGenericArguments(filename, parentFullname, parenthesizedInstance)
-    val node      = NewTypeArgument().code(code)
+    val code = codeForParenthesizedGenericArguments(filename, parentFullname, parenthesizedInstance)
+    // val node      = NewTypeArgument().code(code)
     val inputsAst = parenthesizedInstance.inputs.map(astForType(filename, parentFullname, _))
 
     setCurrentPathCpgNodeType(PathCPGNodeType.TYPEREF_NODE)
@@ -71,7 +71,7 @@ trait AstForPathArguments(implicit schemaValidationMode: ValidationMode) { this:
     }
 
     Ast(unknownNode(parenthesizedInstance, code))
-      .withChild(Ast(node))
+      // .withChild(Ast(node))
       .withChildren(inputsAst)
       .withChild(outputAst)
   }

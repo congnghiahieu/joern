@@ -42,41 +42,25 @@ trait AstForWherePredicate(implicit schemaValidationMode: ValidationMode) { this
     val boundsCode =
       lifetimeWherePredicateInstance.bounds.map(codeForLifetime(filename, parentFullname, _)).mkString(" + ")
 
-    val lifetimePredicateNode = NewLifetimeParameter()
-      .name(lifetimeCode)
-      .code(lifetimeCode)
+    val (lifetimePredicateAst, lifetimePredicateNode) =
+      astForLifetime(filename, parentFullname, lifetimeWherePredicateInstance.lifetime)
     val code = lifetimeWherePredicateInstance.bounds.nonEmpty match {
       case true  => s"$lifetimeCode: $boundsCode"
       case false => lifetimeCode
     }
-    val ast = scope.lookupVariable(lifetimeCode) match {
-      case Some(newNode, _) => {
-        newNode match {
-          case lifetimeParameterNode: NewLifetimeParameter =>
-            Ast(lifetimePredicateNode).withRefEdge(lifetimePredicateNode, lifetimeParameterNode)
-          case _ => Ast(lifetimePredicateNode)
-        }
-      }
-      case _ => Ast(lifetimePredicateNode)
-    }
 
     val boundsWrapper = lifetimeWherePredicateInstance.bounds.nonEmpty match {
       case true =>
-        val bounds  = lifetimeWherePredicateInstance.bounds.map(astForLifetime(filename, parentFullname, _)).toList
+        val bounds = lifetimeWherePredicateInstance.bounds.map { lifetime =>
+          // TODO: Fix this buggy code
+          astForLifetime(filename, parentFullname, lifetime)
+        }.toList
+
         val wrapper = unknownNode(BoundAst(), boundsCode)
 
-        bounds.foreach(ast => {
-          val dst = ast.root.get match {
-            case lifetime: NewLifetime => lifetime
-            case _                     => throw new RuntimeException("Expected lifetime node")
-          }
-          diffGraph.addEdge(wrapper, dst, EdgeTypes.AST)
-          // diffGraph.addEdge(wrapper, dst, EdgeTypes.OUT_LIVE)
-          // diffGraph.addEdge(wrapper, dst, EdgeTypes.CONDITION)
-          // diffGraph.addEdge(wrapper, dst, EdgeTypes.IMPORTS)
-          // diffGraph.addEdge(wrapper, dst, EdgeTypes.REF)
-          // diffGraph.addEdge(wrapper, dst, EdgeTypes.BINDS)
-          // diffGraph.addEdge(wrapper, dst, EdgeTypes.BINDS_TO)
+        bounds.foreach((ast, node) => {
+          diffGraph.addEdge(wrapper, node, EdgeTypes.AST)
+          diffGraph.addEdge(lifetimePredicateNode, node, EdgeTypes.OUT_LIVE)
         })
 
         Ast(wrapper)
@@ -84,7 +68,7 @@ trait AstForWherePredicate(implicit schemaValidationMode: ValidationMode) { this
     }
 
     Ast(unknownNode(lifetimeWherePredicateInstance, code))
-      .withChild(ast)
+      .withChild(lifetimePredicateAst)
       .withChild(boundsWrapper)
   }
 
@@ -143,23 +127,32 @@ trait AstForWherePredicate(implicit schemaValidationMode: ValidationMode) { this
       .withChild(boundWrapper)
   }
 
-  def astForLifetime(filename: String, parentFullname: String, lifetimeInstance: Lifetime): Ast = {
+  def astForLifetime(filename: String, parentFullname: String, lifetimeInstance: Lifetime): (Ast, NewLifetime) = {
     val lifetimeName = codeForLifetime(filename, parentFullname, lifetimeInstance)
     val node = NewLifetime()
       .name(lifetimeName)
+      .code(lifetimeName)
 
     val ast = scope.lookupVariable(lifetimeName) match {
-      case Some(newNode, _) => {
-        newNode match {
-          case lifetimeParameterNode: NewLifetimeParameter =>
-            Ast(node).withRefEdge(node, lifetimeParameterNode)
-          case _ => Ast(node)
-        }
+      case Some(newNode, code) => {
+        logger.warn(s"Found LP node ${code} for L node $lifetimeName")
+        Ast(node).withRefEdge(node, newNode)
+        // newNode match {
+
+        //   case lifetimeParameterNode: NewLifetimeParameter => {
+        //     logger.warn(
+        //       s"Found LP node ${lifetimeParameterNode.name}/${lifetimeParameterNode.code} for L node $lifetimeName"
+        //     )
+        //     Ast(node)
+        //       .withRefEdge(node, newNode)
+        //   }
+        //   case _ => Ast(node)
+        // }
       }
-      case _ => Ast(node)
+      case None => Ast(node)
     }
 
-    ast
+    (ast, node)
   }
 
   def codeForLifetime(filename: String, parentFullname: String, lifetimeInstance: Lifetime): String = {
