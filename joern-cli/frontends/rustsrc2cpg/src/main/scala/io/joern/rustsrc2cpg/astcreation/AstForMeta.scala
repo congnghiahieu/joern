@@ -31,8 +31,9 @@ trait AstForMeta(implicit schemaValidationMode: ValidationMode) { this: AstCreat
   }
   def astForPath(filename: String, parentFullname: String, pathInstance: Path, qself: Option[QSelf] = None): Ast = {
     val (fullname, _, code) = codeForPath(filename, parentFullname, pathInstance, qself)
-    val wrapper             = unknownNode(WrapperAst(), code)
-    val segmentsAst         = pathInstance.segments.map(astForPathSegment(filename, parentFullname, _)).toList
+    val wrapper = unknownNode(WrapperAst(), code)
+      .parserTypeName(classOf[Path].getSimpleName)
+    val segmentsAst = pathInstance.segments.map(astForPathSegment(filename, parentFullname, _)).toList
     segmentsAst.length match {
       case 1 => segmentsAst.head
       case _ => Ast(wrapper).withChildren(segmentsAst)

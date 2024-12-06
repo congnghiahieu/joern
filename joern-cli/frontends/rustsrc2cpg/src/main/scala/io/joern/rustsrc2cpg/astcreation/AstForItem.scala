@@ -146,7 +146,10 @@ trait AstForItem(implicit schemaValidationMode: ValidationMode) { this: AstCreat
     }
     val importNode = newImportNode(code, importedEntity, importedAs, itemExternCrate)
 
-    Ast(unknownNode(WrapperAst(), code))
+    Ast(
+      unknownNode(WrapperAst(), code)
+        .parserTypeName(classOf[ItemExternCrate].getSimpleName)
+    )
       .withChild(Ast(importNode))
       // .withChild(Ast(modifierNode))
       .withChildren(annotationsAst)
@@ -216,7 +219,10 @@ trait AstForItem(implicit schemaValidationMode: ValidationMode) { this: AstCreat
     }
     val foreignItemAst = itemForeignMod.items.map(astForForeignItem(filename, parentFullname, _)).toList
 
-    Ast(unknownNode(WrapperAst(), code))
+    Ast(
+      unknownNode(WrapperAst(), code)
+        .parserTypeName(classOf[ItemForeignMod].getSimpleName)
+    )
       .withChildren(annotationsAst)
       .withChildren(foreignItemAst)
   }
@@ -294,7 +300,10 @@ trait AstForItem(implicit schemaValidationMode: ValidationMode) { this: AstCreat
 
         val importNode = newImportNode(code, itemMod.ident, itemMod.ident, itemMod)
 
-        Ast(unknownNode(WrapperAst(), code))
+        Ast(
+          unknownNode(WrapperAst(), code)
+            .parserTypeName(classOf[ItemMod].getSimpleName)
+        )
           .withChild(Ast(importNode))
           // .withChild(Ast(modifierNode))
           .withChildren(annotationsAst)
@@ -568,7 +577,10 @@ trait AstForItem(implicit schemaValidationMode: ValidationMode) { this: AstCreat
 
     val importNode = newImportNode(code, importedEntity, importedAs, itemUse)
 
-    Ast(unknownNode(WrapperAst(), code))
+    Ast(
+      unknownNode(WrapperAst(), code)
+        .parserTypeName(classOf[ItemUse].getSimpleName)
+    )
       .withChild(Ast(importNode))
       // .withChild(Ast(modifierNode))
       .withChildren(annotationsAst)

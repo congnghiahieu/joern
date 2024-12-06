@@ -44,7 +44,8 @@ trait AstForUseTree(implicit schemaValidationMode: ValidationMode) { this: AstCr
 
   private def astForUseName(filename: String, parentFullname: String, ident: Ident): Ast = {
     val code = codeForUseName(filename, parentFullname, ident)
-    val node = newImportNode(code, ident, ident, UnknownAst()).isExplicit(true)
+    val node = newImportNode(code, ident, ident, UnknownAst())
+      .isExplicit(true)
     Ast(node)
   }
 

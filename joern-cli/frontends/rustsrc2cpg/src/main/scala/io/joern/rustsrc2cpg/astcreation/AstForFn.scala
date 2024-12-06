@@ -19,7 +19,7 @@ trait AstForFn(implicit schemaValidationMode: ValidationMode) { this: AstCreator
 
   def astForReturnType(filename: String, parentFullname: String, returnTypeInstance: ReturnType): Ast = {
     if (!returnTypeInstance.isDefined) {
-      return Ast(unknownNode(UnknownAst(), ""))
+      return Ast(unknownNode(UnknownAst(), "").parserTypeName(classOf[ReturnType].getSimpleName))
     }
 
     return astForType(filename, parentFullname, returnTypeInstance.get)

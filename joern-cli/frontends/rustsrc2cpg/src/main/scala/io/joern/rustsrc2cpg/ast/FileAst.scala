@@ -30,7 +30,7 @@ abstract class RustAst {
 class UnknownAst extends RustAst
 class WrapperAst extends RustAst
 class BoundAst   extends RustAst
-class ExprElse   extends RustAst {}
+class ExprElse   extends RustAst
 
 class FileAst extends RustAst {
   var shebang: Option[String]              = None
