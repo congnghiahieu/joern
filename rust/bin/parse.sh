@@ -10,9 +10,12 @@ DATABASE="neo4j"
 DATABASE_USER="neo4j"
 DATABASE_PASSWORD="12345678"
 
+EXTRA_ARGS=""
+
 case $1 in
 "rust")
   INPUT_DIR=$ROOT_DIR/rust/tests/rust/
+  EXTRA_ARGS=""
   ;;
 "rustdownload")
   INPUT_DIR=$ROOT_DIR/rust/tests/rustdownload/
@@ -39,7 +42,7 @@ esac
 
 rm -rf $OUTPUT_DIR
 
-$ROOT_DIR/joern-parse -J-Xmx25G --output $CPG_PATH $INPUT_DIR
+$ROOT_DIR/joern-parse -J-Xmx25G $INPUT_DIR --output $CPG_PATH $EXTRA_ARGS --language RUSTLANG --frontend-args --rust-parser-path /home/hieucien/Workspace/joern/joern-cli/frontends/rustsrc2cpg/bin/rust-parser/rust-parser
 
 $ROOT_DIR/joern-export --repr=all --format=neo4jcsv --out=$OUTPUT_DIR $CPG_PATH
 

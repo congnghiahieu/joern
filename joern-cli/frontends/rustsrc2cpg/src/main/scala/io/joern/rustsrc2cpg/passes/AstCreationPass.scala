@@ -53,7 +53,7 @@ class AstCreationPass(
 
   override def generateParts(): Array[Array[String]] = {
     val command =
-      s"${config.rustParserPath} --input ${inputRootPath} --output ${outputDirPath.toString} --stdout --json --cargo-toml"
+      s"${config.rustParserPath} --input ${inputRootPath} --output ${outputDirPath.toString} --stdout --stderr --json --cargo-toml"
 
     runShellCommand(command) match {
       case Success(output) =>
@@ -75,7 +75,8 @@ class AstCreationPass(
         val arr = collect.map(file => file.getAbsolutePath).toArray(classTag[String])
         Seq(arr).toArray
       case Failure(exception) =>
-        throw new RuntimeException("Rust parser run failed! Please check the your rust parser binary.")
+        throw new RuntimeException(s"""Rust parser run failed! Please check the your rust parser binary
+        Run command ${command}""".stripMargin)
     }
   }
 

@@ -1,4 +1,4 @@
-// // // Ví dụ đoạn mã nguồn cho cú pháp if let.
+// // Ví dụ đoạn mã nguồn cho cú pháp if let.
 // fn main() {
 //     let number: Option<i32> = None;
 
