@@ -51,19 +51,17 @@ trait AstForWherePredicate(implicit schemaValidationMode: ValidationMode) { this
 
     val boundsWrapper = lifetimeWherePredicateInstance.bounds.nonEmpty match {
       case true =>
+        val wrapper = unknownNode(BoundAst(), boundsCode)
         val bounds = lifetimeWherePredicateInstance.bounds.map { lifetime =>
-          // TODO: Fix this buggy code
-          astForLifetime(filename, parentFullname, lifetime)
+          {
+            val (ast, node) = astForLifetime(filename, parentFullname, lifetime)
+            diffGraph.addEdge(lifetimePredicateNode, node, EdgeTypes.OUT_LIVE)
+            ast
+          }
         }.toList
 
-        val wrapper = unknownNode(BoundAst(), boundsCode)
-
-        bounds.foreach((ast, node) => {
-          diffGraph.addEdge(wrapper, node, EdgeTypes.AST)
-          diffGraph.addEdge(lifetimePredicateNode, node, EdgeTypes.OUT_LIVE)
-        })
-
         Ast(wrapper)
+          .withChildren(bounds)
       case false => Ast()
     }
 

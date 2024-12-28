@@ -14,6 +14,7 @@ import io.shiftleft.codepropertygraph.generated.ModifierTypes
 import io.shiftleft.codepropertygraph.generated.nodes.*
 
 import scala.collection.mutable.ListBuffer
+import io.shiftleft.codepropertygraph.generated.EdgeTypes
 
 trait AstForType(implicit schemaValidationMode: ValidationMode) { this: AstCreator =>
   def astForType(filename: String, parentFullname: String, typeInstance: Type): Ast = {
@@ -112,8 +113,12 @@ trait AstForType(implicit schemaValidationMode: ValidationMode) { this: AstCreat
     val typeFullname = typeFullnameForTypeReference(filename, parentFullname, typeReferenceInstance)
     val wrapper      = unknownNode(typeReferenceInstance, typeFullname)
     val lifetimeAst = typeReferenceInstance.lifetime match {
-      case Some(lifetime) => astForLifetime(filename, parentFullname, lifetime)._1
-      case None           => Ast()
+      case Some(lifetime) => {
+        val (ast, node) = astForLifetime(filename, parentFullname, lifetime)
+        diffGraph.addEdge(wrapper, node, EdgeTypes.OUT_LIVE)
+        ast
+      }
+      case None => Ast()
     }
     val elem = typeReferenceInstance.elem match {
       case Some(elem) => astForType(filename, parentFullname, elem)

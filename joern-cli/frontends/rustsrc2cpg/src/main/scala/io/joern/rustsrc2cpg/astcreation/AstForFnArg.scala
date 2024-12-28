@@ -107,7 +107,6 @@ trait AstForFnArg(implicit schemaValidationMode: ValidationMode) { this: AstCrea
     val lifetimeAst = receiverInstance.lifetime match {
       case Some(lifetime) => {
         val (ast, node) = astForLifetime(filename, parentFullname, lifetime)
-        diffGraph.addEdge(parameterNode, node, EdgeTypes.AST)
         diffGraph.addEdge(parameterNode, node, EdgeTypes.OUT_LIVE)
         ast
       }
@@ -116,7 +115,7 @@ trait AstForFnArg(implicit schemaValidationMode: ValidationMode) { this: AstCrea
 
     Ast(parameterNode)
       .withChild(typeAst)
-      // .withChild(lifetimeAst)
+      .withChild(lifetimeAst)
       .withChildren(annotationsAst)
   }
 

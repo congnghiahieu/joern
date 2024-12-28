@@ -47,15 +47,17 @@ trait AstForGenericParam(implicit schemaValidationMode: ValidationMode) { this: 
     }
     val boundsWrapper = lifetimeParamInstance.bounds.nonEmpty match {
       case true =>
-        val bounds  = lifetimeParamInstance.bounds.map(astForLifetime(filename, parentFullname, _)).toList
         val wrapper = unknownNode(BoundAst(), boundsCode)
-
-        bounds.foreach((ast, node) => {
-          diffGraph.addEdge(wrapper, node, EdgeTypes.AST)
-          diffGraph.addEdge(lifetimeParamNode, node, EdgeTypes.OUT_LIVE)
-        })
+        val bounds = lifetimeParamInstance.bounds
+          .map(lifetime => {
+            val (ast, node) = astForLifetime(filename, parentFullname, lifetime)
+            diffGraph.addEdge(lifetimeParamNode, node, EdgeTypes.OUT_LIVE)
+            ast
+          })
+          .toList
 
         Ast(wrapper)
+          .withChildren(bounds)
       case false => Ast()
     }
 
